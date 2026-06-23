@@ -4,18 +4,18 @@ sidebarTitle: "Text-to-Speech"
 description: "Dummy Gemini Bot supports dual-engine TTS via Microsoft Edge TTS and Google Gemini TTS, with automatic failover, OGG output, and configurable voice pitch."
 ---
 
-When a user replies to a bot message with a voice-note request, the bot generates a spoken OGG audio response and sends it back as a Telegram voice note. Dummy Gemini Bot supports two TTS engines — Microsoft Edge TTS and Google Gemini TTS — with automatic failover between them, so audio delivery is as reliable as possible even when API quotas are exhausted.
+When a user sends a voice note to the bot, the bot processes the audio through Gemini and responds with both a text reply and a spoken OGG voice note generated via TTS. Dummy Gemini Bot supports two TTS engines — Microsoft Edge TTS and Google Gemini TTS — with automatic failover between them, so audio delivery is as reliable as possible even when API quotas are exhausted.
 
 ## How to Trigger TTS
 
-TTS is triggered by a specific interaction pattern:
+TTS is triggered automatically whenever a user sends a **voice message** to the bot:
 
-1. The bot sends any message in a chat.
-2. A user **replies** to that bot message with a voice request (e.g. "read this out loud", "send as voice", etc.).
-3. The bot detects the intent from the message context and initiates the TTS pipeline.
-4. A voice note OGG file is sent back in the same chat.
+1. A user sends a voice note to the bot (in a DM, or in a group where the bot would normally respond).
+2. The bot downloads and processes the audio through Gemini's audio understanding capabilities.
+3. Gemini generates a text response, which is then fed into the TTS pipeline.
+4. A voice note OGG file is sent back in the same chat as the bot's reply.
 
-No special command is required — the bot infers the intent from the reply context.
+No special command is required — sending a voice note is sufficient to trigger the full voice-in, voice-out pipeline.
 
 ## Edge TTS Engine
 
@@ -40,7 +40,9 @@ Multiple models can be configured in `TTS_GEMINI_MODEL` as an ordered list. The 
 
 ## Audio Format
 
-Both engines output **OGG/Opus** files, which are natively compatible with Telegram voice notes. Telegram displays them with a waveform and playback controls.
+Both engines ultimately produce **OGG/Opus** files, which are natively compatible with Telegram voice notes. Telegram displays them with a waveform and playback controls.
+
+Edge TTS generates an intermediate **MP3** file via `edge-tts`, which is then converted to OGG/Opus by **ffmpeg** before being sent as a voice note.
 
 Gemini's raw audio output is **PCM** (`audio/L16`, 24 kHz, mono). The bot auto-detects this format and converts it to OGG/Opus via **ffmpeg** before sending. No manual conversion is needed.
 

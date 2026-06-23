@@ -1,5 +1,5 @@
 ---
-title: "Broadcast Messages to All Chats"
+title: "Broadcast Messages to All Chats — Dummy Gemini Bot"
 sidebarTitle: "Broadcast"
 description: "Use Dummy Gemini Bot's Cast tab to send broadcast messages to all group chats and DMs stored in the database, with delivery tracking."
 ---
@@ -48,8 +48,8 @@ Content-Type: application/json
 The broadcast iterates over every `chat_id` in the `messages` table. For each chat:
 
 - A successful send increments the `sent` counter in the response.
-- A failed send (e.g. the bot was removed from the group, or the user blocked the bot) logs a `BROADCAST_ERROR` entry in the error log and increments the `failed` count.
-- Chats where delivery permanently fails are flagged with `send_failed = 1` in `chat_metadata`, and are surfaced in the dashboard so you can identify stale chats.
+- A failed send (e.g. the bot was removed from the group, or the user blocked the bot) logs a `BROADCAST_ERROR` entry in the error log. The number of failed deliveries can be derived as `total - sent`.
+- The `total` field reflects the number of distinct `chat_id` values in the `messages` table at the time of the broadcast.
 
 <Warning>
 Broadcasts are sent to **ALL chats** in the database, including private DMs and every group the bot has ever joined. There is no preview, filtering, or undo. If you need to test your message, do so manually in a single chat before triggering a broadcast.

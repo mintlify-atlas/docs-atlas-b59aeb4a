@@ -1,7 +1,7 @@
 ---
-title: "Runtime Configuration via the Settings Tab"
+title: "Runtime Configuration — Dummy Gemini Bot Settings"
 sidebarTitle: "Settings"
-description: "Edit all runtime settings for Dummy Gemini Bot from the admin dashboard Settings tab — model IDs, TTS engines, persona prompts, daily summaries, yt-dlp tools, and cookie rotation."
+description: "Edit Dummy Gemini Bot runtime settings from the admin dashboard — model IDs, TTS engines, persona prompts, daily summaries, and yt-dlp tools."
 ---
 
 The **Settings** tab exposes all keys from the `config` table in the SQLite database as editable fields. Changes are saved via `POST /api/config`, which updates both the persistent database record and the in-memory `runtime_config` dictionary immediately — **no bot restart is required**.

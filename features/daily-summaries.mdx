@@ -1,5 +1,5 @@
 ---
-title: "Automated Daily Group Chat Summaries"
+title: "Automated Daily Group Chat Summaries via Gemini AI"
 sidebarTitle: "Daily Summaries"
 description: "Configure Dummy Gemini Bot to post a scheduled sarcastic daily summary of group chat activity, with a custom prompt and configurable posting time."
 ---
@@ -26,7 +26,7 @@ The 30-second polling interval means summaries are delivered within 30 seconds o
 | `DAILY_SUMMARY_PROMPT` | *(Persian sarcastic prompt)* | System prompt used to generate the summary. Editable in the admin Settings tab. |
 
 <Tip>
-  Enable daily summaries directly from the **admin dashboard Settings tab** without restarting the bot. Changes to `DAILY_SUMMARY_ENABLED` and `DAILY_SUMMARY_TIME` take effect within 60 seconds.
+  Enable daily summaries directly from the **admin dashboard Settings tab** without restarting the bot. When the scheduler is disabled it polls every 60 seconds; once enabled, it polls every 30 seconds. Changes to `DAILY_SUMMARY_TIME` take effect on the next 30-second poll cycle.
 </Tip>
 
 ## Daily Cleanup

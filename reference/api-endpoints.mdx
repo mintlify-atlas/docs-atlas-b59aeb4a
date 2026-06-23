@@ -1,5 +1,5 @@
 ---
-title: "REST API Endpoint Reference"
+title: "REST API Endpoint Reference — Dummy Gemini Bot Admin"
 sidebarTitle: "API Endpoints"
 description: "Full parameter and response documentation for all Dummy Gemini Bot REST API endpoints: stats, config, chats, moderation, broadcast, and quota monitoring."
 ---
@@ -41,8 +41,8 @@ Returns live database statistics and the most recent error log entries. Useful f
 <ResponseField name="recent_errors" type="array">
   The last 10 entries from the `error_logs` table. Each object contains:
   - `timestamp` — ISO datetime string of when the error occurred
-  - `error_type` — short error category string (e.g. `"TELEGRAM_API_ERROR"`)
-  - `error_message` — human-readable error description
+  - `type` — short error category string (e.g. `"TELEGRAM_API_ERROR"`)
+  - `message` — human-readable error description
   - `stack_trace` — full Python traceback, if captured
 </ResponseField>
 
@@ -265,12 +265,12 @@ Blocks a user or group by Telegram ID. If the target is a group (negative ID), t
   Telegram user or chat ID to block.
 </ParamField>
 
-<ParamField body="type" type="string" required>
-  Entity type — `"user"` or `"group"`.
+<ParamField body="type" type="string">
+  Entity type — `"user"` or `"group"`. Defaults to `"unknown"` if omitted.
 </ParamField>
 
-<ParamField body="name" type="string" required>
-  Display name to show in the blocked list.
+<ParamField body="name" type="string">
+  Display name to show in the blocked list. Defaults to `"Unknown"` if omitted.
 </ParamField>
 
 **Response:**

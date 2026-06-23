@@ -1,5 +1,5 @@
 ---
-title: "REST API Overview for Dummy Gemini Bot Admin"
+title: "REST API Overview — Dummy Gemini Bot Admin Server"
 sidebarTitle: "API Overview"
 description: "The Dummy Gemini Bot REST API runs on port 8080, authenticated via Telegram WebApp HMAC signatures. All admin dashboard features are powered by this API."
 ---
@@ -18,7 +18,7 @@ When deploying to a VPS or cloud host, substitute `localhost` with the domain se
 
 All requests must include the following header:
 
-```
+```http
 Authorization: Bearer <telegram_webapp_init_data>
 ```
 

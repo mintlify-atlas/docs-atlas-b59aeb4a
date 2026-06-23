@@ -80,7 +80,7 @@ Transcribes a voice note to Persian text using Gemini's speech-to-text capabilit
   ```
 - **Notes:**
   - The command must be sent as a reply to a voice or audio message — sending it standalone will result in an error prompt.
-  - The transcription is output verbatim without translation, using `audio/ogg` MIME type.
+  - The audio is sent to Gemini as `audio/ogg` and the transcription is returned verbatim without translation.
   - Gemini processes the audio with fallback model support.
 
 ---

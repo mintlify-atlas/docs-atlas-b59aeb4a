@@ -1,7 +1,7 @@
 ---
-title: "Admin WebApp Dashboard Overview"
+title: "Admin WebApp Dashboard Overview — Dummy Gemini Bot"
 sidebarTitle: "Overview"
-description: "Dummy Gemini Bot's React admin WebApp dashboard provides real-time stats, chat moderation, broadcast messaging, configuration, and API quota monitoring in Telegram."
+description: "Explore Dummy Gemini Bot's admin WebApp: real-time stats, chat moderation, broadcasts, runtime config, and per-model API quota monitoring in Telegram."
 ---
 
 The admin dashboard is a React Single Page App accessible directly inside Telegram as a Mini App, requiring no separate browser login. It communicates with the bot's built-in REST API server and surfaces all operational controls — from live database stats and per-chat moderation to broadcast messaging and runtime configuration — in a single, authenticated interface.
@@ -21,7 +21,7 @@ The admin dashboard is a React Single Page App accessible directly inside Telegr
 
 The dashboard authenticates via **Telegram's WebApp init data HMAC signature**. When the Mini App opens, Telegram automatically provides a signed `initData` string that the frontend forwards as a `Bearer` token on every API request:
 
-```
+```http
 Authorization: Bearer <Telegram WebApp initData>
 ```
 

@@ -7,7 +7,7 @@ description: "Complete reference for admin-only Telegram commands in Dummy Gemin
 Admin commands are restricted to users whose Telegram username is listed in `ALLOWED_ADMINS` (configured in `.env`). These commands control runtime configuration, special user management, and direct user communication.
 
 <Note>
-The bot checks the sender's Telegram username against `ALLOWED_ADMINS` (case-insensitive) before executing any admin command. Non-admins — or users sending admin commands in group chats — are silently rejected with a warning logged to the console. There is no public error message shown to unauthorized users.
+The bot checks the sender's Telegram username against `ALLOWED_ADMINS` (case-insensitive) before executing any admin command. Unauthorized users are silently rejected with a warning logged to the console. There is no public error message shown to unauthorized users. Note that `/admin` additionally requires a private (DM) chat; `/reply` has no such restriction.
 </Note>
 
 ---
@@ -17,7 +17,7 @@ The bot checks the sender's Telegram username against `ALLOWED_ADMINS` (case-ins
 Opens the admin WebApp dashboard and registers the admin's chat ID for support ticket forwarding. When called without subcommands, it displays a full configuration overview including the current model ID, context window size, timeout, TTS settings, system instruction, and available subcommands.
 
 - **Syntax:** `/admin`
-- **Where:** DMs (admin's private chat with the bot)
+- **Where:** DMs only (the handler explicitly rejects non-private chats)
 - **Example:**
   ```
   /admin
@@ -67,6 +67,32 @@ Sets the AI response generation timeout in seconds. Requests that exceed this th
 
 ---
 
+### /admin set\_chance \<float\>
+
+Sets the probability that the bot will spontaneously roast a random message in a group chat, without being directly addressed.
+
+- **Syntax:** `/admin set_chance <float>`
+- **Example:**
+  ```
+  /admin set_chance 0.05
+  ```
+- **Effect:** Updates `RANDOM_ROAST_CHANCE` in `runtime_config` and the database immediately. Accepts a decimal between `0.0` (never) and `1.0` (always); values outside this range are rejected.
+
+---
+
+### /admin set\_instruction \<prompt\>
+
+Replaces the global system instruction (persona prompt) used for all AI responses at runtime.
+
+- **Syntax:** `/admin set_instruction <prompt text>`
+- **Example:**
+  ```
+  /admin set_instruction You are a helpful assistant that always replies in formal Persian.
+  ```
+- **Effect:** Updates `SYSTEM_INSTRUCTION` in `runtime_config` and the database immediately. All subsequent AI requests use the new system prompt.
+
+---
+
 ### /admin add\_special \<@username\> \<instruction\>
 
 Adds or updates a VIP user with a custom system instruction. When that user sends a message, the bot uses their personal instruction instead of the global system prompt.
@@ -97,16 +123,42 @@ Removes a VIP user and their custom instruction from the database.
 
 ---
 
-### /admin list\_specials
+### /admin list\_special
 
 Lists all VIP users currently registered in the database along with their custom instructions.
 
-- **Syntax:** `/admin list_specials`
+- **Syntax:** `/admin list_special`
 - **Example:**
   ```
-  /admin list_specials
+  /admin list_special
   ```
 - **Note:** If no special users are registered, the bot responds with an informational message rather than an empty list.
+
+---
+
+### /admin stats
+
+Returns a brief statistics overview of the bot's database, including total unique chats, total logged messages, and database file size.
+
+- **Syntax:** `/admin stats`
+- **Example:**
+  ```
+  /admin stats
+  ```
+- **Effect:** Queries `get_db_stats` and replies with a formatted summary. No changes are made to any configuration.
+
+---
+
+### /admin broadcast \<message\>
+
+Sends a plain-text message to every chat ID stored in the database. Useful for announcing downtime or updates to all active users and groups.
+
+- **Syntax:** `/admin broadcast <message>`
+- **Example:**
+  ```
+  /admin broadcast The bot will be offline for maintenance at midnight.
+  ```
+- **Effect:** Iterates all known chat IDs and sends the message text to each one with a short rate-limiting delay between sends. A summary of successful and failed deliveries is returned to the admin.
 
 ---
 
@@ -115,7 +167,7 @@ Lists all VIP users currently registered in the database along with their custom
 Sends a message directly to a user's DM from the bot. Used by admins to respond to support tickets received via `/support`.
 
 - **Syntax:** `/reply <user_id> <message>`
-- **Where:** DMs (admin's private chat with the bot)
+- **Where:** DMs and groups (admin-only; no private-chat restriction is enforced by the handler)
 - **Example:**
   ```
   /reply 123456789 Your issue has been resolved
