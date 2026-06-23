@@ -1,0 +1,95 @@
+---
+title: "Dummy Gemini Bot: AI Telegram Bot Powered by Gemini"
+sidebarTitle: "Introduction"
+description: "Dummy Gemini Bot is a self-hostable Telegram bot using Google Gemini AI with multimodal chat, TTS, media downloads, and a React admin dashboard."
+---
+
+Dummy Gemini Bot is a production-grade, fully self-hostable Telegram bot powered by the **Google GenAI SDK (Gemini)**. Built for developers, power users, and communities who want a deeply customizable AI companion, it combines multimodal chat (text, images, and voice notes), dual-engine Text-to-Speech, high-speed media downloading, and a React-based admin dashboard — all running inside a single Docker container. Out of the box, the bot ships with a witty, sarcastic Tehrani Persian persona, though every aspect of its personality and behavior is fully configurable through environment variables or the live admin web panel.
+
+<Note>
+  Ready to get the bot up and running right now? Jump straight to the [Quickstart](/quickstart) guide — you'll have a live bot in under five minutes.
+</Note>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="AI Chat" icon="brain" href="/features/ai-chat">
+    Multimodal Gemini-powered conversations with async SQLite history, configurable context windows, dynamic model failover, and VIP persona overrides.
+  </Card>
+  <Card title="Text-to-Speech" icon="microphone" href="/features/text-to-speech">
+    Dual-engine TTS using Microsoft Edge TTS (free, natural Persian) and Google Gemini TTS (premium audio), with automatic failover between engines.
+  </Card>
+  <Card title="Media Downloader" icon="download" href="/features/media-downloader">
+    Auto-detects Instagram, Threads, YouTube, and Pinterest links. Downloads and re-uploads media with inline streaming, album support, and a 50 MB bypass via Cobalt CDN.
+  </Card>
+  <Card title="Admin Dashboard" icon="chart-bar" href="/dashboard/overview">
+    React-based Telegram Mini App with stats, moderation controls, broadcast tools, live settings editing, and real-time Gemini API quota meters.
+  </Card>
+  <Card title="Daily Summaries" icon="calendar" href="/features/daily-summaries">
+    Scheduled background task that auto-generates sarcastic Persian summaries of group chat activity and posts them at a configured time each day.
+  </Card>
+  <Card title="Support System" icon="headset" href="/features/support-system">
+    Built-in DM support ticket system. Users submit tickets via `/support`; admins respond with `/reply`. Includes voice note transcription via Gemini.
+  </Card>
+</CardGroup>
+
+## Project Structure
+
+The repository is organized as a Python backend with a React frontend housed inside the `webapp/` directory:
+
+```text
+dummy_gemini_bot/
+├── src/
+│   ├── __init__.py      # Package initializer
+│   ├── config.py        # Settings loader, environment validations, and logging setup
+│   ├── database.py      # Asynchronous database connection, schema setup, stats, and operations
+│   ├── handlers.py      # Core Telegram handlers (Admin commands, Text/Multimodal messaging)
+│   └── server.py        # Aiohttp Web API server, CORS, auth, and admin REST endpoints
+├── webapp/
+│   ├── src/
+│   │   ├── App.jsx      # React WebApp frontend layout and dynamic configuration bindings
+│   │   ├── index.css    # Design system, animations, and responsive styles
+│   │   └── main.jsx     # Frontend entry point
+│   ├── index.html       # WebApp template
+│   └── vite.config.js   # Vite builder configurations
+├── main.py              # Main entry point to initialize and start bot polling
+├── requirements.txt     # Python dependency definitions
+├── Dockerfile           # Multi-stage optimized Docker build definition (React + Python)
+├── docker-compose.yml   # Compose setup for Docker volume and env mounts
+├── .env.example         # Template configuration file
+└── README.md            # Comprehensive system documentation
+```
+
+## Requirements
+
+### Python Dependencies
+
+The following packages are installed from `requirements.txt`:
+
+| Package | Purpose |
+| :--- | :--- |
+| `python-telegram-bot>=20.0` | Async Telegram Bot API wrapper |
+| `google-genai>=0.1.1` | Google GenAI SDK (Gemini) |
+| `aiosqlite>=0.19.0` | Async SQLite database driver |
+| `python-dotenv>=1.0.0` | `.env` file loader |
+| `pillow>=10.0.0` | Image inspection and processing |
+| `aiohttp>=3.9.0` | Async HTTP client/server |
+| `aiohttp-cors>=0.7.0` | CORS middleware for the Web API |
+| `yt-dlp>=2024.04.09` | Video/media downloader |
+| `edge-tts>=6.1.9` | Microsoft Edge Text-to-Speech |
+| `cryptography>=42.0.0` | Secure token and data operations |
+| `instaloader>=4.10` | Instagram media scraping |
+| `curl-cffi>=0.10.0,<0.15.0` | Browser TLS impersonation for scraper bypass |
+
+### System Dependencies
+
+In addition to the Python packages, the following system-level tools are required:
+
+- **`ffmpeg`** — Used for audio format conversion (raw PCM → OGG), video thumbnail generation, and `ffprobe` metadata extraction. Installed automatically in Docker.
+- **Deno runtime** — Used by `yt-dlp` as its JavaScript engine for sites that require JS evaluation (e.g. certain YouTube flows). The Docker image copies the Deno binary directly from the official `denoland/deno:bin` image.
+
+## License
+
+Dummy Gemini Bot is released under the **MIT License**. You are free to use, modify, and distribute it for personal or commercial projects.
+
+View the full source code and license on [GitHub →](https://github.com/AmiraliNotFound/dummy-gemini-bot)

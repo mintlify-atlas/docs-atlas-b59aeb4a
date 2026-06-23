@@ -1,0 +1,60 @@
+---
+title: "Broadcast Messages to All Chats"
+sidebarTitle: "Broadcast"
+description: "Use Dummy Gemini Bot's Cast tab to send broadcast messages to all group chats and DMs stored in the database, with delivery tracking."
+---
+
+The **Cast** tab lets you send a single message to every active chat in the database simultaneously. This is useful for announcing bot maintenance windows, pushing policy updates, or distributing important notices to all groups and DMs the bot participates in.
+
+## How to Broadcast
+
+1. Open the **Cast** tab in the admin dashboard.
+2. Type your message in the **broadcast compose** field.
+3. Click **Send to Broadcast** — this calls `POST /api/broadcast`.
+4. The API collects all chat IDs from the database and dispatches the message to each one concurrently.
+
+The bot first attempts delivery with **Markdown** parse mode. If that fails (e.g. due to formatting conflicts), it automatically retries with **plain text** as a fallback before recording the failure.
+
+## API Reference
+
+```http
+POST /api/broadcast
+Authorization: Bearer <Telegram WebApp initData>
+Content-Type: application/json
+
+{
+  "message": "Your broadcast text here"
+}
+```
+
+**Response:**
+
+```json
+{
+  "status": "success",
+  "sent": 42,
+  "total": 45
+}
+```
+
+| Field | Description |
+|---|---|
+| `status` | `"success"` on completion (even if some sends failed) |
+| `sent` | Number of chats that received the message successfully |
+| `total` | Total number of chats attempted |
+
+## Delivery Behavior
+
+The broadcast iterates over every `chat_id` in the `messages` table. For each chat:
+
+- A successful send increments the `sent` counter in the response.
+- A failed send (e.g. the bot was removed from the group, or the user blocked the bot) logs a `BROADCAST_ERROR` entry in the error log and increments the `failed` count.
+- Chats where delivery permanently fails are flagged with `send_failed = 1` in `chat_metadata`, and are surfaced in the dashboard so you can identify stale chats.
+
+<Warning>
+Broadcasts are sent to **ALL chats** in the database, including private DMs and every group the bot has ever joined. There is no preview, filtering, or undo. If you need to test your message, do so manually in a single chat before triggering a broadcast.
+</Warning>
+
+## User Profile Links
+
+From the **Mod** tab chat drawer, you can use **Send Profile Link** to send a user their own Telegram profile shortcut directly to a DM. This calls `POST /api/chat/send_profile_link` and delivers an inline-keyboard message to the requesting admin's own Telegram chat containing a `tg://user?id=<target_id>` deep link button — useful for support follow-ups or identity verification.

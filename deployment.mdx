@@ -1,0 +1,237 @@
+---
+title: "Deploy Dummy Gemini Bot on Linux (Docker & Systemd)"
+sidebarTitle: "Deployment"
+description: "Step-by-step guide to deploy Dummy Gemini Bot using Docker Compose or a systemd service on any Linux VPS, including HTTPS setup with Cloudflare Tunnel."
+---
+
+Dummy Gemini Bot supports two deployment strategies on Linux. **Docker Compose** (recommended) is the simplest path — it handles all system dependencies, the React frontend build, and process management in one command. **Systemd** gives you a bare-metal installation if you prefer to manage the Python process directly on the host without containers.
+
+<Tabs>
+  <Tab title="Docker (Recommended)">
+    <Steps>
+      <Step title="Install Docker and Docker Compose">
+        Update your package index and install Docker along with Docker Compose:
+
+        ```bash
+        sudo apt update && sudo apt install docker.io docker-compose -y
+        ```
+      </Step>
+
+      <Step title="Clone the repository and configure environment variables">
+        Clone the repository to `/opt/dummy_gemini_bot` and create your `.env` file:
+
+        ```bash
+        cd /opt/dummy_gemini_bot
+        cp .env.example .env
+        nano .env
+        ```
+
+        Fill in all four required fields:
+
+        - **`TELEGRAM_TOKEN`** — Your bot API token from [@BotFather](https://t.me/BotFather)
+        - **`GEMINI_API_KEY`** — Your Google Gemini API key from [Google AI Studio](https://aistudio.google.com)
+        - **`ALLOWED_ADMINS`** — Comma-separated Telegram usernames with admin access (e.g. `AmiraliNotFound,MyUser`)
+        - **`WEBAPP_URL`** — *(Optional)* Your public HTTPS URL for the admin Mini App (e.g. `https://admin.yourdomain.com`)
+      </Step>
+
+      <Step title="Start the containers">
+        Build the image and start the bot in detached mode:
+
+        ```bash
+        docker-compose up -d --build
+        ```
+
+        <Note>
+          **Docker Compose Buildx Bake Warning**
+
+          If you see the warning `WARN [0000] Docker Compose is configured to build using Bake, but buildx isn't installed`, Docker Compose is trying to use the modern Bake build engine but the Buildx plugin is missing. Fix it one of two ways:
+
+          **Option 1 — Install the Buildx plugin (recommended):**
+          ```bash
+          sudo apt-get install docker-buildx-plugin -y
+          ```
+
+          **Option 2 — Disable Bake entirely:**
+          ```bash
+          COMPOSE_BAKE=false docker-compose up -d --build
+          ```
+        </Note>
+      </Step>
+
+      <Step title="Database persistence">
+        All persistent data is stored in the `./data` folder on your host machine, mounted into the container at `/app/data`. The `docker-compose.yml` sets `DB_FILE=/app/data/chat_history.db` automatically via an environment override, so your entire chat history, settings, and VIP persona configurations survive container rebuilds and system reboots without any extra configuration.
+      </Step>
+
+      <Step title="Admin WebApp port">
+        The bot's aiohttp-based Admin WebApp REST API is exposed on **port `8080`**. This is the backend that serves the React admin dashboard. You can access it locally at `http://localhost:8080` or expose it publicly via a reverse proxy or Cloudflare Tunnel (see [Setting Up HTTPS](#setting-up-https-for-the-admin-webapp-cloudflare-tunnel) below).
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="Systemd (Manual)">
+    <Steps>
+      <Step title="Install system dependencies">
+        Update the system and install Python, SQLite, ffmpeg, and Git:
+
+        ```bash
+        sudo apt update && sudo apt upgrade -y && sudo apt install python3-pip python3-venv sqlite3 ffmpeg git -y
+        ```
+      </Step>
+
+      <Step title="Create a virtual environment and install Python dependencies">
+        Set up an isolated Python environment and install all required packages:
+
+        ```bash
+        python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt
+        ```
+      </Step>
+
+      <Step title="Build the React frontend">
+        The admin dashboard is a React/Vite app that must be compiled before the bot can serve it. From the project root:
+
+        ```bash
+        cd webapp && npm install && npm run build && cd ..
+        ```
+
+        The compiled static assets are output to `webapp/dist/`, which the aiohttp server automatically serves.
+      </Step>
+
+      <Step title="Create the systemd service file">
+        Create a new service unit at `/etc/systemd/system/gemini-bot.service`:
+
+        ```bash
+        sudo nano /etc/systemd/system/gemini-bot.service
+        ```
+
+        Paste the following configuration:
+
+        ```ini
+        [Unit]
+        Description=Dummy Gemini Telegram Bot Service
+        After=network.target
+
+        [Service]
+        Type=simple
+        User=root
+        WorkingDirectory=/opt/dummy_gemini_bot
+        ExecStart=/opt/dummy_gemini_bot/venv/bin/python /opt/dummy_gemini_bot/main.py
+        Restart=always
+        RestartSec=5
+
+        [Install]
+        WantedBy=multi-user.target
+        ```
+
+        The `Restart=always` and `RestartSec=5` directives ensure the bot automatically recovers from crashes or unhandled exceptions.
+      </Step>
+
+      <Step title="Enable and start the service">
+        Reload the systemd daemon, enable the service to start on boot, and start it immediately:
+
+        ```bash
+        sudo systemctl daemon-reload && sudo systemctl enable gemini-bot.service && sudo systemctl start gemini-bot.service
+        ```
+
+        Check the service status with:
+
+        ```bash
+        sudo systemctl status gemini-bot.service
+        ```
+
+        And follow live logs with:
+
+        ```bash
+        journalctl -u gemini-bot.service -f
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+---
+
+## Setting Up HTTPS for the Admin WebApp (Cloudflare Tunnel)
+
+Telegram requires all Mini App WebApps to be served over **HTTPS**. The easiest way to satisfy this requirement without managing SSL certificates is a free **Cloudflare Tunnel**, which creates a secure public HTTPS endpoint that proxies traffic to your local port 8080.
+
+<Steps>
+  <Step title="Point your domain to localhost:8080 in Cloudflare">
+    In your Cloudflare dashboard, create a tunnel or DNS rule that routes your chosen subdomain (e.g. `admin.yourdomain.com`) to `http://localhost:8080`.
+  </Step>
+  <Step title="Set WEBAPP_URL in your .env file">
+    Add your public HTTPS URL to `.env`:
+
+    ```env
+    WEBAPP_URL=https://admin.yourdomain.com
+    ```
+  </Step>
+  <Step title="Restart the bot">
+    Apply the change by restarting:
+
+    ```bash
+    # Docker
+    docker-compose down && docker-compose up -d
+
+    # Systemd
+    sudo systemctl restart gemini-bot.service
+    ```
+  </Step>
+  <Step title="Open the dashboard">
+    Send `/admin` in Telegram. The bot will now display a **🚀 Open Admin Dashboard** inline button that launches the React Mini App inside Telegram.
+  </Step>
+</Steps>
+
+<Warning>
+  If `WEBAPP_URL` is not set in your `.env` file, the `/admin` inline button will **not appear** in the bot's response. The REST API will still run on port 8080, but the Telegram Mini App entry point requires a valid public HTTPS URL to function.
+</Warning>
+
+---
+
+## Docker Compose Reference
+
+The full `docker-compose.yml` used by the project:
+
+```yaml
+services:
+  bot:
+    build: .
+    container_name: dummy_gemini_bot
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    environment:
+      - DB_FILE=/app/data/chat_history.db
+    ports:
+      - "8080:8080"
+```
+
+Key points:
+- `restart: always` — the container restarts automatically on failure or system reboot.
+- `env_file: .env` — loads all variables from your `.env` file into the container environment.
+- `volumes: ./data:/app/data` — mounts the local `./data` directory for database and config persistence.
+- `environment: DB_FILE=...` — overrides the database path to the mounted volume location.
+- `ports: 8080:8080` — exposes the Admin WebApp API to the host network.
+
+---
+
+## Dockerfile Overview
+
+The project uses a **two-stage Docker build** to keep the final image lean while fully automating the frontend compilation:
+
+**Stage 1 — Frontend builder (`node:20-alpine`):**
+- Sets the working directory to `/app/webapp`
+- Copies `package.json` / `package-lock.json` and runs `npm install`
+- Copies the full `webapp/` source tree and runs `npm run build`
+- Produces compiled static assets in `/app/webapp/dist`
+
+**Stage 2 — Python runtime (`python:3.11-slim`):**
+- Installs `build-essential` and `ffmpeg` via `apt-get` (provides `ffprobe` as well)
+- Copies the **Deno binary** directly from `denoland/deno:bin` into `/usr/local/bin/deno` — this is the JavaScript runtime used by `yt-dlp` for sites requiring JS evaluation
+- Installs all Python dependencies from `requirements.txt` with `pip install --no-cache-dir`
+- Copies the `src/` package and `main.py` entry point
+- Copies the compiled frontend assets from Stage 1 into `./webapp/dist`
+- Exposes port `8080` and sets the default command to `python main.py`
+
+This approach means the Node.js toolchain is never present in the final running image, resulting in a smaller and more secure production container.

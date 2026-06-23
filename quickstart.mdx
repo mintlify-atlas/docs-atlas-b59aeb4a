@@ -1,47 +1,106 @@
 ---
-title: "Quickstart"
-description: "Begin with a guide on the fastest path to a successful outcome"
+title: "Get Started with Dummy Gemini Bot in 5 Minutes"
+sidebarTitle: "Quickstart"
+description: "Learn how to deploy Dummy Gemini Bot with Docker Compose in five steps. Requires a Telegram bot token and Google Gemini API key."
 ---
 
-Describe how someone begins using your product. What is the first thing they need to do? Are there any prerequisites?
+The fastest path to a running Dummy Gemini Bot is **Docker**. A single `docker-compose up` command handles the entire build pipeline — compiling the React admin frontend, installing Python dependencies, pulling in `ffmpeg` and the Deno runtime, and starting the bot in the background. No manual environment setup required.
 
-A quickstart should take someone from zero to using your product. They'll get a quick win and a sense of what they can accomplish.
-
-## Prerequisites
-
-Before you begin, you must have:
-
-- Requirement one (for example, Node.js 18+, a free account, an API key)
-- Requirement two (for example, a compatible device, a compatible browser, a compatible operating system)
-
-## Get started
+<Note>
+  **Prerequisites — make sure you have these before starting:**
+  - [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) installed on your machine or VPS
+  - A Telegram bot token from [@BotFather](https://t.me/BotFather)
+  - A Gemini API key from [Google AI Studio](https://aistudio.google.com)
+</Note>
 
 <Steps>
-  <Step title="Install">
-    Describe how to install your product or sign up.
+  <Step title="Clone the repository">
+    Download the source code and move into the project directory:
 
     ```bash
-    npm install your-package
+    git clone https://github.com/AmiraliNotFound/dummy-gemini-bot.git && cd dummy-gemini-bot
     ```
   </Step>
-  <Step title="Configure">
-    Describe any setup or configuration needed before first use.
+
+  <Step title="Create your .env file">
+    Copy the example environment file and open it for editing:
 
     ```bash
-    your-cli init
+    cp .env.example .env
     ```
+
+    The `.env.example` template contains all required variables:
+
+    ```env
+    # Telegram Bot Token (Get it from @BotFather on Telegram)
+    TELEGRAM_TOKEN=your_telegram_bot_token_here
+
+    # Gemini API Key (Get it from Google AI Studio)
+    GEMINI_API_KEY=your_gemini_api_key_here
+
+    # SQLite Database Filename (Optional: default is chat_history.db)
+    DB_FILE=chat_history.db
+
+    # Comma-separated list of Telegram usernames allowed to access /admin commands
+    ALLOWED_ADMINS=AmiraliNotFound,AnotherAdmin
+    ```
+
+    Replace `your_telegram_bot_token_here` and `your_gemini_api_key_here` with your actual credentials, and update `ALLOWED_ADMINS` with your own Telegram username(s).
   </Step>
-  <Step title="Run it">
-    Show the first thing a user does to see it working.
+
+  <Step title="Start with Docker">
+    Build and launch the bot in detached mode:
 
     ```bash
-    your-cli start
+    docker-compose up -d --build
     ```
+
+    Docker performs a **two-stage build** defined in the `Dockerfile`:
+    - **Stage 1 (Node 20 Alpine):** Installs npm dependencies and runs `npm run build` to compile the React admin frontend into static assets.
+    - **Stage 2 (Python 3.11-slim):** Installs `ffmpeg`, copies the Deno binary from the official `denoland/deno:bin` image, installs all Python dependencies from `requirements.txt`, and copies the compiled frontend from Stage 1 — then starts the bot with `python main.py`.
+
+    The `./data` directory is mounted as a Docker volume, so your database and configuration persist across container restarts.
+  </Step>
+
+  <Step title="Verify the bot is running">
+    Stream the container logs to confirm everything started correctly:
+
+    ```bash
+    docker-compose logs -f bot
+    ```
+
+    You should see messages confirming the database was initialized, commands were registered with Telegram, and polling has started. Press `Ctrl+C` to stop following the logs without stopping the bot.
+  </Step>
+
+  <Step title="Test in Telegram">
+    Open Telegram and find the bot you created with @BotFather. Send these two commands to confirm it's alive:
+
+    ```
+    /start
+    /help
+    ```
+
+    `/start` triggers a cheeky greeting, and `/help` returns a dynamically generated, RTL-safe Persian guide listing all available commands.
   </Step>
 </Steps>
 
 <Tip>
-  Give people a way to get help. This could be a link to a support page, a chat with a customer support agent, or a forum for your product.
-
-  Example: Need help? Reach out to us at [support@yourcompany.com](mailto:support@yourcompany.com).
+  Your bot's SQLite database and any runtime configuration changes are automatically persisted in the **`./data`** folder on your host machine (mapped to `/app/data` inside the container). This means your chat history, admin settings, and custom persona presets survive container rebuilds and restarts without any extra backup steps.
 </Tip>
+
+## What's next
+
+<CardGroup cols={2}>
+  <Card title="Full Deployment Options" icon="server" href="/deployment">
+    Docker Compose deep-dive, systemd service setup, HTTPS with Cloudflare Tunnel, and production hardening tips.
+  </Card>
+  <Card title="Environment Variables" icon="sliders" href="/configuration/environment">
+    Complete reference for all configuration keys — models, TTS engines, context limits, personas, daily summaries, and more.
+  </Card>
+  <Card title="User Command Reference" icon="terminal" href="/reference/user-commands">
+    Every user and admin command explained with usage examples and permission notes.
+  </Card>
+  <Card title="Admin Dashboard" icon="chart-bar" href="/dashboard/overview">
+    Explore the React-based Telegram Mini App for real-time stats, moderation, broadcasts, and live settings editing.
+  </Card>
+</CardGroup>

@@ -1,0 +1,98 @@
+---
+title: "Runtime Configuration via the Settings Tab"
+sidebarTitle: "Settings"
+description: "Edit all runtime settings for Dummy Gemini Bot from the admin dashboard Settings tab — model IDs, TTS engines, persona prompts, daily summaries, yt-dlp tools, and cookie rotation."
+---
+
+The **Settings** tab exposes all keys from the `config` table in the SQLite database as editable fields. Changes are saved via `POST /api/config`, which updates both the persistent database record and the in-memory `runtime_config` dictionary immediately — **no bot restart is required**.
+
+## Configuration Fields
+
+### AI Model
+
+| Key | Description |
+|---|---|
+| `MODEL_ID` | Primary Gemini model used for responses (e.g. `gemini-2.5-flash`) |
+| `FALLBACK_MODELS` | Comma-separated list of fallback models tried in order when the primary fails (e.g. `gemini-2.5-flash-lite,gemini-2.5-flash,gemma-4-31b-it`) |
+| `CONTEXT_LIMIT` | Number of recent messages included in the AI context window |
+| `TIMEOUT` | Request timeout in seconds for Gemini API calls |
+
+### TTS
+
+| Key | Description |
+|---|---|
+| `TTS_ENGINE` | Active TTS backend — `edge` (Microsoft Edge TTS) or `gemini` |
+| `TTS_GEMINI_MODEL` | Comma-separated Gemini TTS model(s) (e.g. `gemini-2.5-flash-preview-tts`) |
+| `TTS_GEMINI_VOICE` | Voice name for the Gemini TTS engine (e.g. `Kore`) |
+| `TTS_EDGE_VOICE` | Voice name for the Edge TTS engine (e.g. `fa-IR-FaridNeural`) |
+| `TTS_FALLBACK_TO_EDGE` | `True`/`False` — fall back to Edge TTS if Gemini TTS fails |
+| `TTS_VOICE_PITCH` | Pitch multiplier for TTS output (float, default `1.0`) |
+
+### Behavior
+
+| Key | Description |
+|---|---|
+| `SYSTEM_INSTRUCTION` | Global system prompt that defines the bot's default persona |
+| `PERSONA_PRESETS` | JSON array of preset persona objects — each with `name` and `prompt` fields |
+| `RANDOM_ROAST_CHANCE` | Probability (float `0.0`–`1.0`) that the bot spontaneously roasts a message without being directly addressed |
+
+### Discussion Mode
+
+| Key | Description |
+|---|---|
+| `DISCUSSION_MODE_ENABLED` | `True`/`False` — enable scientific/technical discussion mode |
+| `DISCUSSION_PROMPT` | System instruction override used when discussion mode is active |
+
+### Daily Summaries
+
+| Key | Description |
+|---|---|
+| `DAILY_SUMMARY_ENABLED` | `True`/`False` — enable automatic daily chat summaries |
+| `DAILY_SUMMARY_TIME` | Time of day to send the summary (24-hour format, e.g. `00:00`) |
+| `DAILY_SUMMARY_PROMPT` | Prompt used to generate the daily summary |
+
+### Rate Monitoring
+
+| Key | Default | Description |
+|---|---|---|
+| `MONITOR_LIMIT_RPM` | `15` | RPM ceiling for text generation models (used in Limits tab progress bars) |
+| `MONITOR_LIMIT_RPD` | `1500` | RPD ceiling for text generation models |
+| `MONITOR_LIMIT_TTS_RPM` | `15` | RPM ceiling for TTS models |
+| `MONITOR_LIMIT_TTS_RPD` | `1500` | RPD ceiling for TTS models |
+
+## Saving Changes
+
+Edit any field in the Settings tab and click **Save**. The dashboard sends a `POST /api/config` request with the updated key-value pairs:
+
+```http
+POST /api/config
+Authorization: Bearer <Telegram WebApp initData>
+Content-Type: application/json
+
+{
+  "MODEL_ID": "gemini-2.5-flash",
+  "RANDOM_ROAST_CHANCE": "0.05"
+}
+```
+
+The server persists each key to the `config` SQLite table via `save_config_key` and immediately updates the live `runtime_config` dictionary, so the bot picks up the change on the very next incoming message.
+
+## yt-dlp Tools
+
+The Settings tab also exposes two maintenance utilities for the media downloader:
+
+### Upload Cookies
+
+**`POST /api/upload_cookies`** — Upload a fresh `cookies.txt` file for yt-dlp authenticated downloads. Paste the contents of your Netscape-format cookie export into the upload field and submit. The file is saved to `data/cookies.txt` (and synced to the root `cookies.txt` as a fallback).
+
+### Update yt-dlp
+
+**`POST /api/update_ytdlp`** — Triggers a `pip install --upgrade yt-dlp` subprocess on the server to update the scraper to the latest published version. The response includes the pip output log. No SSH access or server restart is needed.
+
+<Tip>
+Keep yt-dlp updated regularly — Instagram, YouTube, and Threads frequently change their internal APIs and anti-bot protection mechanisms, which can break media downloads until the scraper is patched.
+</Tip>
+
+<Note>
+`SYSTEM_INSTRUCTION` and `DISCUSSION_PROMPT` support long multi-line text and can be edited in the full-size textarea in the Settings tab. `PERSONA_PRESETS` must be a valid **JSON array** where each element is an object with `"name"` and `"prompt"` string fields. Invalid JSON will cause preset-related features to fall back to defaults.
+</Note>

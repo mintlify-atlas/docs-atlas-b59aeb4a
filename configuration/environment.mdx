@@ -1,0 +1,59 @@
+---
+title: "Environment Variables for Dummy Gemini Bot"
+sidebarTitle: "Environment"
+description: "All environment variables for Dummy Gemini Bot: required API keys, database path, admin access list, WebApp URL, and the auto-generated encryption key."
+---
+
+Dummy Gemini Bot reads its core secrets and paths from a `.env` file in the project root. Configuration is loaded at startup via [python-dotenv](https://pypi.org/project/python-dotenv/), so any variable set in `.env` is available to the process before any other module initialises.
+
+## .env.example
+
+Copy this file to `.env` and fill in your values before starting the bot:
+
+```ini
+# Telegram Bot Token (Get it from @BotFather on Telegram)
+TELEGRAM_TOKEN=your_telegram_bot_token_here
+
+# Gemini API Key (Get it from Google AI Studio)
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# SQLite Database Filename (Optional: default is chat_history.db)
+DB_FILE=chat_history.db
+
+# Comma-separated list of Telegram usernames allowed to access /admin commands
+ALLOWED_ADMINS=AmiraliNotFound,AnotherAdmin
+```
+
+## Variable Reference
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `TELEGRAM_TOKEN` | ✅ Yes | — | Bot API token from [@BotFather](https://t.me/BotFather) |
+| `GEMINI_API_KEY` | ✅ Yes | — | Google Gemini API key from [Google AI Studio](https://aistudio.google.com/) |
+| `DB_FILE` | No | `chat_history.db` | Path to the SQLite database file used to store chat history and config |
+| `WEBAPP_URL` | No | *(empty)* | HTTPS URL of the admin dashboard. Required to show the `/admin` Mini App button |
+| `ENCRYPTION_KEY` | No | *(auto-generated)* | AES-256 Fernet key for message encryption. Auto-generated and saved to `encryption_key.key` on first run |
+| `ALLOWED_ADMINS` | No | `AmiraliNotFound` | Comma-separated Telegram usernames with admin access. Usernames are compared case-insensitively |
+
+<Note>
+  The `ENCRYPTION_KEY` is auto-generated on first run and persisted to `encryption_key.key` alongside the database. **Do NOT delete this file** — losing it makes all stored message history unreadable. Back it up alongside your database whenever you take snapshots.
+</Note>
+
+<Note>
+  `WEBAPP_URL` must be an **HTTPS** URL. Telegram Mini Apps reject non-HTTPS origins. Use [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) or a reverse proxy such as Nginx to terminate TLS in front of the local admin server.
+</Note>
+
+## Applying Changes
+
+The bot reads `.env` only at startup. After editing the file you must restart the process for changes to take effect.
+
+**Bare Python:**
+```bash
+# Stop the running process, then:
+python -m src.main
+```
+
+**Docker Compose:**
+```bash
+docker-compose down && docker-compose up -d
+```

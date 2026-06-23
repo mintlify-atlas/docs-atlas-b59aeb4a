@@ -1,0 +1,59 @@
+---
+title: "Chat Moderation Controls in the Admin Dashboard"
+sidebarTitle: "Moderation"
+description: "Manage active chats, mute/unmute, set per-chat personas and models, manage blocked users and VIP special users from Dummy Gemini Bot's Mod dashboard tab."
+---
+
+The **Mod** tab is the primary moderation control center, letting you manage every active chat and user from one screen. It provides a searchable, filterable list of all chats the bot is participating in, per-chat configuration drawers, a blocked entity manager, and a VIP special-user registry — all accessible without touching the database directly.
+
+## Chat List
+
+The Mod tab fetches all chats from the `chat_metadata` table via `GET /api/chats`, ordered by `last_active` (most recently active first). Each chat card in the list displays:
+
+- **Chat name** — the Telegram group or user display name
+- **Type** — `group` or `private`
+- **Message count** — total messages stored for this chat
+- **Last active** — timestamp of the most recent message
+- **Mute status** — visual indicator if the chat is currently muted
+
+You can use the **search bar** to filter by name, and toggle between `all`, `groups`, and `private` filter chips to narrow the list.
+
+## Chat Drawer (Per-Chat Settings)
+
+Click any chat card to open a **slide drawer** with full per-chat controls. Changes are saved via `POST /api/chat/settings` and take effect immediately.
+
+| Control | Description |
+|---|---|
+| **Mute / Unmute toggle** | When muted, the bot sends no AI responses to this chat |
+| **Custom Roast Chance** | Override the global `RANDOM_ROAST_CHANCE` for this chat (float `0.0`–`1.0`) |
+| **Custom Cooldown** | Per-chat message cooldown window in seconds |
+| **Custom Model** | Override `MODEL_ID` for this chat (e.g. `gemini-2.5-flash-lite`) |
+| **Custom TTS Engine** | Override `TTS_ENGINE` for this chat — `edge` or `gemini` |
+| **Persona Preset selector** | Choose from the presets defined in `PERSONA_PRESETS` |
+| **Custom System Instruction** | Type a unique system instruction that applies only to this chat |
+| **Alert Chat** | Send a custom alert message to the chat via `POST /api/chat/alert` |
+| **Leave Chat** | Instructs the bot to leave the group via `POST /api/chat/leave` |
+| **Top Users** | Displays the top message senders in the chat, fetched from `GET /api/chat/top_users` |
+
+## Blocked Users & Groups
+
+The **Blocked** section, backed by `GET /api/blocked`, `POST /api/block`, and `POST /api/unblock`, lets you manage entities the bot will completely ignore.
+
+- Add any **user ID** or **group ID** to the blocked list — the bot will return no responses to blocked targets.
+- If a negative (group) ID is blocked, the bot will also attempt to **leave that chat automatically**.
+- Each blocked entry shows the entity's name and type (`user` or `group`).
+- To remove an entity, click the **Unblock** button next to it, which calls `POST /api/unblock`.
+
+## Special (VIP) Users
+
+The **Specials** section manages VIP users registered in the `special_users` table, backed by `GET /api/specials`, `POST /api/specials`, and `POST /api/specials/delete`.
+
+When a registered special user sends a message, the bot substitutes their **custom system instruction** instead of the global `SYSTEM_INSTRUCTION`. This lets you give specific users a tailored bot persona without affecting anyone else.
+
+- **Add** a special user by entering their Telegram username and a custom system instruction.
+- **Edit** existing entries inline — click the edit icon on any row to modify the instruction in place, then save.
+- **Remove** a special user to revert them to the global persona.
+
+<Note>
+All per-chat settings (mute, roast chance, cooldown, model, TTS engine, and system instruction) are persisted to the `chat_metadata` table in SQLite and take effect immediately — no bot restart is required.
+</Note>

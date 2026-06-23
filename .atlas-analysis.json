@@ -1,0 +1,117 @@
+{
+  "projectType": "saas",
+  "projectName": "Dummy Gemini Bot",
+  "projectDescription": "A production-grade, containerized Telegram bot powered by Google Gemini AI with multimodal chat, dual-engine TTS, multi-platform media downloads, and a React-based admin dashboard.",
+  "theme": "almond",
+  "primaryColor": "#26a5e4",
+  "lightColor": "#6fc3ed",
+  "darkColor": "#4c4c4c",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "deployment"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/environment",
+              "configuration/model-settings",
+              "configuration/tts-settings",
+              "configuration/persona-settings"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/ai-chat",
+              "features/text-to-speech",
+              "features/media-downloader",
+              "features/discussion-mode",
+              "features/daily-summaries",
+              "features/support-system"
+            ]
+          },
+          {
+            "group": "Admin Dashboard",
+            "pages": [
+              "dashboard/overview",
+              "dashboard/moderation",
+              "dashboard/broadcast",
+              "dashboard/settings"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
+        "groups": [
+          {
+            "group": "Commands",
+            "pages": [
+              "reference/user-commands",
+              "reference/admin-commands"
+            ]
+          },
+          {
+            "group": "API",
+            "pages": [
+              "reference/api-overview",
+              "reference/api-endpoints"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Resilient AI generation with automatic failover across multiple Gemini models",
+    "Dual-engine Text-to-Speech using Microsoft Edge TTS and Google Gemini TTS",
+    "Multi-platform media downloader (Instagram, Threads, YouTube, Pinterest, Twitter)",
+    "AES-256 encrypted SQLite message history with configurable context pruning",
+    "React-based admin WebApp dashboard with Telegram Mini App authentication",
+    "Custom Persian persona presets with per-chat and per-user overrides",
+    "Daily automated group chat summary scheduler",
+    "Guest Bots Mode for inline usage without group membership",
+    "Real-time API quota monitoring with per-model RPM/RPD meters",
+    "Broadcast messaging, chat moderation, and support ticket system"
+  ],
+  "publicApiSurface": [
+    "/start command",
+    "/help command",
+    "/ask <question> command",
+    "/tldr command",
+    "/transcribe command",
+    "/support <message> command",
+    "/start_discussion command",
+    "/end_discussion command",
+    "/admin command",
+    "/reply <user_id> <message> command",
+    "GET /api/stats",
+    "GET /api/config",
+    "POST /api/config",
+    "GET /api/chats",
+    "POST /api/chat/settings",
+    "POST /api/chat/leave",
+    "POST /api/chat/alert",
+    "GET /api/chat/top_users",
+    "GET /api/blocked",
+    "POST /api/block",
+    "POST /api/unblock",
+    "GET /api/specials",
+    "POST /api/specials",
+    "POST /api/specials/delete",
+    "POST /api/broadcast",
+    "POST /api/upload_cookies",
+    "POST /api/update_ytdlp",
+    "GET /api/model_limits",
+    "POST /api/chat/send_profile_link"
+  ]
+}

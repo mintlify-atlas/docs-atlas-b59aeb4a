@@ -1,20 +1,66 @@
 ---
-title: "Introduction"
-description: "Welcome to your project"
+title: "Dummy Gemini Bot: AI-powered Telegram Bot"
+sidebarTitle: "Home"
+description: "A production-grade, containerized Telegram bot powered by Google Gemini AI with multimodal chat, dual-engine TTS, media downloads, and an admin dashboard."
 ---
 
-Write a short description of your product here. What it does, who it's for, and what they can accomplish with it.
+Dummy Gemini Bot is a fully self-hostable Telegram bot that brings Google Gemini AI into your group chats and DMs. It ships with a witty Persian persona out of the box, supports images and voice notes, downloads media from Instagram, YouTube, Threads, and more — and includes a React-based admin WebApp dashboard for real-time moderation and configuration.
 
-<Tip>
-  Ready to make this your own? Start by editing this page. Update your `docs.json` file to customize your site. Then fill out the [Quickstart](/quickstart) page.
-</Tip>
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get your bot running in under five minutes with Docker.
+  </Card>
+  <Card title="Deployment Guide" icon="server" href="/deployment">
+    Deploy with Docker Compose or systemd on any Linux VPS.
+  </Card>
+  <Card title="Configuration" icon="sliders" href="/configuration/environment">
+    Set environment variables, model IDs, TTS engines, and personas.
+  </Card>
+  <Card title="Command Reference" icon="terminal" href="/reference/user-commands">
+    Every user and admin command with usage examples.
+  </Card>
+</CardGroup>
 
-<Card title="Quickstart" icon="rocket" href="/quickstart">
-  This card links to the quickstart page in your project.
-</Card>
-<Card title="Components" icon="puzzle-piece" href="https://mintlify.com/docs/components">
-  Add cards, callouts, steps, tabs, and more to design and structure your pages.
-</Card>
-<Card title="Settings" icon="gear" href="https://mintlify.com/docs/organize/settings">
-  Set your site name, branding, and navigation in the `docs.json` file.
-</Card>
+## What's Inside
+
+<CardGroup cols={2}>
+  <Card title="Resilient AI Chat" icon="brain" href="/features/ai-chat">
+    Primary + fallback Gemini model queue with context-aware history and per-chat persona overrides.
+  </Card>
+  <Card title="Dual-Engine TTS" icon="microphone" href="/features/text-to-speech">
+    Microsoft Edge TTS and Google Gemini TTS with automatic failover and configurable voices.
+  </Card>
+  <Card title="Media Downloader" icon="download" href="/features/media-downloader">
+    Inline download of Instagram, YouTube, Threads, Pinterest, and Twitter content.
+  </Card>
+  <Card title="Admin Dashboard" icon="gauge" href="/dashboard/overview">
+    React WebApp with stats, moderation controls, broadcast, and live quota monitoring.
+  </Card>
+  <Card title="Daily Summaries" icon="calendar" href="/features/daily-summaries">
+    Scheduled sarcastic group-chat summaries posted automatically every day.
+  </Card>
+  <Card title="REST API" icon="code" href="/reference/api-overview">
+    Authenticated aiohttp REST API powering the admin dashboard on port 8080.
+  </Card>
+</CardGroup>
+
+## Getting Started
+
+<Steps>
+  <Step title="Get your API keys">
+    Obtain a **Telegram Bot Token** from [@BotFather](https://t.me/BotFather) and a **Gemini API key** from [Google AI Studio](https://aistudio.google.com).
+  </Step>
+  <Step title="Configure your environment">
+    Copy `.env.example` to `.env` and fill in `TELEGRAM_TOKEN`, `GEMINI_API_KEY`, and `ALLOWED_ADMINS`.
+  </Step>
+  <Step title="Start with Docker">
+    Run `docker-compose up -d --build` to build the React frontend and Python backend in one step.
+  </Step>
+  <Step title="Open the admin dashboard">
+    Send `/admin` to your bot in Telegram to open the WebApp admin dashboard.
+  </Step>
+</Steps>
+
+<Note>
+  The bot defaults to a witty, sarcastic **Persian (Tehrani)** persona. You can change the system prompt, switch models, and configure every per-chat override from the admin dashboard — no restarts required.
+</Note>

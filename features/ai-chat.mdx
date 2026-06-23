@@ -1,0 +1,58 @@
+---
+title: "AI Chat with Gemini: Context, Personas, and Failover"
+sidebarTitle: "AI Chat"
+description: "How Dummy Gemini Bot handles text, image, and voice messages with Gemini AI — including context history, model failover, multimodal input, and random roast behavior."
+---
+
+At the core of Dummy Gemini Bot is its Gemini-powered conversational pipeline. Every message the bot receives — whether text, an image, or a voice note — is processed through a unified AI pipeline that maintains per-chat history, handles multimodal inputs, and gracefully falls back across multiple Gemini models when rate limits or failures occur.
+
+## Supported Input Types
+
+The bot registers a `MessageHandler` for three Telegram message types:
+
+| Type | Behavior |
+|------|----------|
+| **TEXT** | Sent directly to Gemini with conversation history as context |
+| **PHOTO** | Image (with optional caption) is included as inline data in the Gemini request |
+| **VOICE** | Transcribed to text first, then forwarded to Gemini as a text message |
+
+## Conversation History
+
+Each chat's message history is stored in an `aiosqlite` SQLite database. The bot retains up to **200 messages per chat**. When building the Gemini request, the bot includes the most recent **`CONTEXT_LIMIT`** messages (default: `12`) so the model always has relevant context without exceeding token limits. Messages beyond the 200-message cap are pruned automatically.
+
+<Note>
+  All message history is **AES-256 encrypted at rest** using Fernet encryption before being stored in SQLite. Raw message content is never written to disk unencrypted.
+</Note>
+
+## Multimodal Processing
+
+When a user sends a **photo**, the image bytes are included in the Gemini API request as `inline_data`, allowing the model to reason about image content alongside any accompanying caption.
+
+When a user sends a **voice message**, the audio is first transcribed (via Gemini's audio understanding capabilities) and the resulting text is used as the user's message turn. This means voice messages participate in the same conversation history and context window as text messages.
+
+## Model Failover
+
+The primary model is controlled by the `MODEL_ID` environment variable (default: `gemini-2.5-flash`). If the primary model fails — due to a rate limit, quota exhaustion, or API error — the bot automatically steps through the ordered list defined in `FALLBACK_MODELS`, trying each in sequence until one succeeds.
+
+Every failover attempt is logged to `api_requests_log` for observability. If all fallback models are exhausted, the bot returns a graceful error message to the user rather than silently failing.
+
+## Random Roast
+
+The bot has a configurable probability of inserting an unsolicited sarcastic comment on any incoming message, regardless of whether it would otherwise respond.
+
+- **Config key:** `RANDOM_ROAST_CHANCE`
+- **Default:** `0.02` (2% chance per message)
+- **To disable:** set to `0`
+
+When a roast triggers, the bot sends a one-off sarcastic remark without it counting as a regular conversational turn in history.
+
+## Group Behavior
+
+The bot's response policy differs between group chats and direct messages:
+
+| Context | When the bot responds |
+|---------|----------------------|
+| **DMs** | Every message, unconditionally |
+| **Groups** | Only when directly mentioned (`@bot`), replied to, or when a random roast triggers |
+
+This prevents the bot from flooding group chats with responses to every message while still remaining accessible when needed.

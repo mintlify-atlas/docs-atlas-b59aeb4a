@@ -1,72 +1,91 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mintlify Starter Kit",
+  "name": "Dummy Gemini Bot",
+  "theme": "almond",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#26a5e4",
+    "light": "#6fc3ed",
+    "dark": "#4c4c4c"
   },
-  "favicon": "/favicon.svg",
-  "navigation": {
-    "pages": [
-      {
-        "group": "Getting Started",
-        "pages": [
-          "index",
-          "quickstart"
-        ]
-      }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
+  "favicon": "https://media.brand.dev/910932a1-5562-48da-9f50-454226568c3f.png",
   "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "light": "https://media.brand.dev/4d2d09f0-4440-44d0-b8a8-086070c69c8c.svg",
+    "dark": "https://media.brand.dev/4d2d09f0-4440-44d0-b8a8-086070c69c8c.svg"
   },
   "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
     "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://app.mintlify.com"
+      "type": "github",
+      "href": "https://github.com/AmiraliNotFound/dummy-gemini-bot"
     }
-  },
-  "contextual": {
-    "options": [
-      "copy",
-      "view",
-      "chatgpt",
-      "claude",
-      "perplexity",
-      "mcp",
-      "cursor",
-      "vscode"
-    ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "github": "https://github.com/AmiraliNotFound/dummy-gemini-bot"
     }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "deployment"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/environment",
+              "configuration/model-settings",
+              "configuration/tts-settings",
+              "configuration/persona-settings"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/ai-chat",
+              "features/text-to-speech",
+              "features/media-downloader",
+              "features/discussion-mode",
+              "features/daily-summaries",
+              "features/support-system"
+            ]
+          },
+          {
+            "group": "Admin Dashboard",
+            "pages": [
+              "dashboard/overview",
+              "dashboard/moderation",
+              "dashboard/broadcast",
+              "dashboard/settings"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
+        "groups": [
+          {
+            "group": "Commands",
+            "pages": [
+              "reference/user-commands",
+              "reference/admin-commands"
+            ]
+          },
+          {
+            "group": "API",
+            "pages": [
+              "reference/api-overview",
+              "reference/api-endpoints"
+            ]
+          }
+        ]
+      }
+    ]
   }
 }

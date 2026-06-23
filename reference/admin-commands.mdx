@@ -1,0 +1,132 @@
+---
+title: "Admin Commands Reference for Dummy Gemini Bot"
+sidebarTitle: "Admin Commands"
+description: "Complete reference for admin-only Telegram commands in Dummy Gemini Bot: /admin, /reply, and /admin subcommands for model, limit, timeout, and special user management."
+---
+
+Admin commands are restricted to users whose Telegram username is listed in `ALLOWED_ADMINS` (configured in `.env`). These commands control runtime configuration, special user management, and direct user communication.
+
+<Note>
+The bot checks the sender's Telegram username against `ALLOWED_ADMINS` (case-insensitive) before executing any admin command. Non-admins — or users sending admin commands in group chats — are silently rejected with a warning logged to the console. There is no public error message shown to unauthorized users.
+</Note>
+
+---
+
+### /admin
+
+Opens the admin WebApp dashboard and registers the admin's chat ID for support ticket forwarding. When called without subcommands, it displays a full configuration overview including the current model ID, context window size, timeout, TTS settings, system instruction, and available subcommands.
+
+- **Syntax:** `/admin`
+- **Where:** DMs (admin's private chat with the bot)
+- **Example:**
+  ```
+  /admin
+  ```
+- **Notes:**
+  - Requires `WEBAPP_URL` to be set in `.env` for the dashboard button to appear. If `WEBAPP_URL` is not configured, the text configuration overview is still shown.
+  - This command also registers the admin's chat ID in the `admin_chats` table, enabling support ticket forwarding from `/support`.
+
+---
+
+### /admin set\_model \<model\_id\>
+
+Changes the primary Gemini model ID used for all AI responses at runtime — no restart required.
+
+- **Syntax:** `/admin set_model <model_id>`
+- **Example:**
+  ```
+  /admin set_model gemini-2.5-flash
+  ```
+- **Effect:** Updates `MODEL_ID` in `runtime_config` and persists the change to the database immediately. All subsequent AI requests use the new model.
+
+---
+
+### /admin set\_limit \<number\>
+
+Sets the conversation history context limit — the number of past messages fed to Gemini as context when generating a reply.
+
+- **Syntax:** `/admin set_limit <number>`
+- **Example:**
+  ```
+  /admin set_limit 20
+  ```
+- **Effect:** Updates `CONTEXT_LIMIT` in `runtime_config` and the database immediately. Must be a positive integer; non-numeric input is rejected with an error message.
+
+---
+
+### /admin set\_timeout \<float\>
+
+Sets the AI response generation timeout in seconds. Requests that exceed this threshold are aborted and the bot falls back to its configured fallback models.
+
+- **Syntax:** `/admin set_timeout <float>`
+- **Example:**
+  ```
+  /admin set_timeout 15.0
+  ```
+- **Effect:** Updates `TIMEOUT` in `runtime_config` and the database immediately. Accepts both integer and decimal values; non-numeric input is rejected.
+
+---
+
+### /admin add\_special \<@username\> \<instruction\>
+
+Adds or updates a VIP user with a custom system instruction. When that user sends a message, the bot uses their personal instruction instead of the global system prompt.
+
+- **Syntax:** `/admin add_special <@username> <instruction>`
+- **Example:**
+  ```
+  /admin add_special @john Always respond formally to this user
+  ```
+  For names containing spaces, wrap the name in quotes:
+  ```
+  /admin add_special "John Doe" Always respond in English to this user
+  ```
+- **Effect:** Inserts or updates a row in the `special_users` table with the username (leading `@` stripped) and the custom instruction.
+
+---
+
+### /admin remove\_special \<@username\>
+
+Removes a VIP user and their custom instruction from the database.
+
+- **Syntax:** `/admin remove_special <@username>`
+- **Example:**
+  ```
+  /admin remove_special @john
+  ```
+- **Effect:** Deletes the matching row from the `special_users` table. The leading `@` is stripped automatically before the lookup.
+
+---
+
+### /admin list\_specials
+
+Lists all VIP users currently registered in the database along with their custom instructions.
+
+- **Syntax:** `/admin list_specials`
+- **Example:**
+  ```
+  /admin list_specials
+  ```
+- **Note:** If no special users are registered, the bot responds with an informational message rather than an empty list.
+
+---
+
+### /reply \<user\_id\> \<message\>
+
+Sends a message directly to a user's DM from the bot. Used by admins to respond to support tickets received via `/support`.
+
+- **Syntax:** `/reply <user_id> <message>`
+- **Where:** DMs (admin's private chat with the bot)
+- **Example:**
+  ```
+  /reply 123456789 Your issue has been resolved
+  ```
+- **Notes:**
+  - `user_id` is the numeric Telegram user ID included in the forwarded support ticket message.
+  - The message is delivered to the user with a `✉️ پاسخ مدیریت` header.
+  - Passing a non-numeric `user_id` or a `user_id` that the bot cannot reach will return an error message to the admin.
+
+---
+
+<Tip>
+Most admin settings — including model ID, system instruction persona, TTS engine and voice, context limit, and daily summary scheduling — are more conveniently managed from the **Admin Dashboard Settings tab** (opened via `/admin`) than via individual text commands.
+</Tip>

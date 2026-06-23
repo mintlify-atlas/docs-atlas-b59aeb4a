@@ -1,0 +1,74 @@
+---
+title: "User Support Tickets and Audio Transcription"
+sidebarTitle: "Support System"
+description: "Dummy Gemini Bot's built-in support system lets users submit DM support tickets forwarded to admins, with admin reply capability and voice note transcription."
+---
+
+The bot includes a lightweight support ticket pipeline and audio transcription feature for DM interactions. Users can submit support requests directly from Telegram, admins receive them instantly, and can reply back through the bot — no external helpdesk software required.
+
+## User Support Tickets
+
+Users submit support tickets by sending the `/support` command in a **direct message (DM)** with the bot:
+
+```
+/support <message>
+```
+
+The bot forwards the message along with the user's **Telegram user ID** and **username** to every admin chat ID registered in the `admin_chats` table.
+
+### Example
+
+```
+User (DM):   /support I can't get the bot to respond in my group
+
+Bot → Admin: 📩 Support ticket from @john_doe (ID: 123456789):
+             "I can't get the bot to respond in my group"
+```
+
+<Note>
+  `/support` only works in **DMs**. Sending it in a group chat will not trigger ticket forwarding.
+</Note>
+
+## Admin Replies
+
+Admins can reply directly to a user's DM through the bot using the `/reply` command:
+
+```
+/reply <user_id> <message>
+```
+
+The bot sends the message to the specified user's DM on behalf of itself.
+
+### Example
+
+```
+Admin:      /reply 123456789 Hi, try adding the bot as admin in your group
+
+Bot → User: Hi, try adding the bot as admin in your group
+```
+
+The `user_id` is included in every forwarded support ticket message, so admins can copy it directly for use with `/reply`.
+
+## Audio Transcription
+
+The `/transcribe` command lets any user get a Persian speech-to-text transcription of a voice note, powered by **Gemini's audio understanding**:
+
+1. Find any voice note in the chat.
+2. **Reply to it** with `/transcribe` (or `/transcribe@BotUsername` in groups to avoid ambiguity).
+3. The bot returns the transcribed text in the same chat.
+
+Transcription works in **both groups and DMs**. There is no file size configuration — the audio is sent directly to Gemini for processing.
+
+## Admin Registration
+
+For support ticket forwarding to work, admins must **register their chat ID** with the bot at least once. Registration is done by sending:
+
+```
+/admin
+```
+
+in a **DM with the bot**. This stores the admin's `chat_id` in the `admin_chats` table. Every registered admin receives a copy of all future support tickets.
+
+<Note>
+  If an admin has never sent `/admin` to the bot, they will not receive support ticket notifications — even if they are a Telegram group admin. Registration must be done explicitly via DM.
+</Note>

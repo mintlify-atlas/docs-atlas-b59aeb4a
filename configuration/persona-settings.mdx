@@ -1,0 +1,61 @@
+---
+title: "Persona and System Prompt Configuration"
+sidebarTitle: "Persona Settings"
+description: "Configure Dummy Gemini Bot's AI persona with system instructions, preset prompt libraries, per-chat overrides, VIP user instructions, and discussion mode prompts."
+---
+
+The bot's personality is controlled by a **system instruction** that is prepended to every Gemini request. This shapes the model's tone, language style, and behaviour for every reply. Three levels of override are evaluated in priority order on each incoming message:
+
+> **VIP/Special User override** → **Per-chat custom instruction** → **Global `SYSTEM_INSTRUCTION`**
+
+The highest-priority match wins. If none of the overrides apply, the global `SYSTEM_INSTRUCTION` is used.
+
+## Config Key Reference
+
+| Key | Default | Description |
+|---|---|---|
+| `SYSTEM_INSTRUCTION` | *(Persian sarcastic persona)* | Default system prompt applied to all chats. Editable from the admin **Settings** tab |
+| `PERSONA_PRESETS` | *(JSON array of preset prompts)* | JSON list of named preset prompts selectable per chat from the admin **Mod** tab |
+| `RANDOM_ROAST_CHANCE` | `0.02` | Probability of an unprompted roast on any incoming message (`0.0`–`1.0`). Set to `0` to disable entirely |
+| `DISCUSSION_MODE_ENABLED` | `True` | Toggles availability of the `/start_discussion` and `/end_discussion` commands in chats |
+| `DISCUSSION_PROMPT` | *(Persian technical prompt)* | System instruction used while discussion mode is active — polite, informative, and free of slang |
+
+## PERSONA_PRESETS Format
+
+`PERSONA_PRESETS` must be a valid JSON array. Each element is an object with a `name` (shown in the admin UI dropdown) and a `prompt` (the system instruction text):
+
+```json
+[
+  {"name": "Preset Name", "prompt": "System instruction text here"},
+  {"name": "Polite Assistant", "prompt": "You are a polite and helpful assistant..."}
+]
+```
+
+Presets are stored in the `config` table and loaded into memory at startup. Edits made through the admin dashboard take effect immediately without a restart.
+
+## Priority Resolution Order
+
+When the bot receives a message, it resolves the active system instruction using the following priority chain:
+
+1. **VIP / Special User override** — if the message sender has a custom instruction set (via the admin **Specials** section or `/admin add_special`), that instruction is used. This is the highest-priority override and affects only messages from that specific user.
+2. **Per-chat custom instruction** — if the chat has a `custom_system_instruction` set (via the chat drawer in the admin **Mod** tab), that instruction is used for every message in that chat.
+3. **Global `SYSTEM_INSTRUCTION`** — the default persona applied to all chats that have no per-chat or per-user override configured.
+
+## Per-Chat Overrides
+
+Open the **Mod** tab in the admin dashboard and select any chat to expand its drawer. From there you can either pick one of the named `PERSONA_PRESETS` from the dropdown or type a fully custom instruction in the free-text field. Saving the change writes the instruction to the `custom_system_instruction` column of the `chat_metadata` table and takes effect on the next message in that chat.
+
+To remove a per-chat override and revert to the global persona, clear the custom instruction field and save.
+
+## VIP User Instructions
+
+Special users are individual Telegram accounts that receive a unique system instruction whenever they are the message sender. Add a special user from:
+
+- The **Specials** section in the admin dashboard, or
+- The `/admin add_special <username> <instruction>` command in your Telegram admin chat.
+
+The instruction is stored in the `special_users` table (keyed by lowercase username) and retrieved on every message sent by that user. Remove a special user with `/admin remove_special <username>` or from the dashboard Specials panel.
+
+<Note>
+  All persona changes made through the admin dashboard — including global `SYSTEM_INSTRUCTION` edits, preset selections, per-chat overrides, and VIP instructions — **take effect immediately** without restarting the bot. Configuration is persisted to the SQLite database and read at runtime on each request.
+</Note>

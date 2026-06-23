@@ -1,0 +1,68 @@
+---
+title: "Discussion Mode: Switch to a Technical Persona"
+sidebarTitle: "Discussion Mode"
+description: "Dummy Gemini Bot's discussion mode switches the AI persona to a polite, informative, technical style — ideal for group study sessions, code reviews, and Q&A."
+---
+
+Discussion mode lets you toggle the bot between its default casual, sarcastic persona and a professional, technically precise persona — in any chat, at any time. This is especially useful in group chats where the conversation shifts from casual chatting to focused technical Q&A, code review, or study sessions.
+
+## Enabling Discussion Mode
+
+### Commands
+
+| Command | Effect |
+|---------|--------|
+| `/start_discussion` | Activates discussion mode for the **current chat** |
+| `/end_discussion` | Deactivates discussion mode, reverting to the default persona |
+
+### Example Interaction
+
+```
+User:    /start_discussion
+Bot:     Discussion mode enabled. I'll now respond in a professional,
+         technical style. Ask away!
+
+User:    What's the difference between a mutex and a semaphore?
+Bot:     A mutex (mutual exclusion lock) is a synchronization primitive
+         that allows only one thread to hold the lock at a time...
+         [structured, technical response]
+
+User:    /end_discussion
+Bot:     Discussion mode disabled. Back to normal!
+```
+
+Once `/start_discussion` is sent, all subsequent messages in that chat use the `DISCUSSION_PROMPT` system instruction until `/end_discussion` is called.
+
+## Discussion Persona
+
+When discussion mode is active, the bot uses the `DISCUSSION_PROMPT` system instruction to shape its responses. The default prompt instructs the model to be:
+
+- **Friendly but professional** — polite and approachable, but not casual
+- **Technically precise** — accurate, well-structured answers with correct terminology
+- **Informative** — provides context and explanation, not just one-line answers
+- **No slang or profanity** — clean, neutral language suitable for all audiences
+
+The `DISCUSSION_PROMPT` is fully configurable via the **admin Settings tab** without requiring a bot restart.
+
+## Admin Configuration
+
+| Config Key | Default | Description |
+|------------|---------|-------------|
+| `DISCUSSION_MODE_ENABLED` | `True` | Enables or disables the `/start_discussion` and `/end_discussion` commands globally |
+| `DISCUSSION_PROMPT` | *(Persian technical/professional prompt)* | The system instruction injected when discussion mode is active. Editable in the admin Settings tab. |
+
+Per-chat discussion status is stored in the `is_discussion` column of the `chat_metadata` table in SQLite, so it persists across bot restarts.
+
+<Note>
+  Discussion mode is **per-chat**. Enabling it in a group does not affect DMs, other groups, or any other chat.
+</Note>
+
+## Use Cases
+
+- **Group technical Q&A** — switch on discussion mode before a question session to keep answers structured and on-topic.
+- **Code review discussions** — paste code snippets and get precise, professional feedback without the sarcastic commentary.
+- **Learning sessions** — ideal for study groups where accurate, detailed explanations are more valuable than humor.
+
+<Tip>
+  Use `/start_discussion` before pasting code or asking technical questions for more accurate, well-structured responses. Use `/end_discussion` when the session is over to return to the bot's normal personality.
+</Tip>

@@ -1,0 +1,108 @@
+---
+title: "REST API Overview for Dummy Gemini Bot Admin"
+sidebarTitle: "API Overview"
+description: "The Dummy Gemini Bot REST API runs on port 8080, authenticated via Telegram WebApp HMAC signatures. All admin dashboard features are powered by this API."
+---
+
+The admin REST API is an [aiohttp](https://docs.aiohttp.org/) server running on port **8080**, powering the React admin dashboard. Every endpoint requires Telegram WebApp authentication — unauthenticated or unauthorized requests are rejected before any handler logic runs.
+
+## Base URL
+
+```
+http://localhost:8080
+```
+
+When deploying to a VPS or cloud host, substitute `localhost` with the domain set in `WEBAPP_URL`. **HTTPS is required in production** — Telegram Mini Apps will refuse to load resources over plain HTTP from non-localhost origins.
+
+## Authentication
+
+All requests must include the following header:
+
+```
+Authorization: Bearer <telegram_webapp_init_data>
+```
+
+`<telegram_webapp_init_data>` is the raw URL-encoded string exposed by the Telegram Mini App JavaScript SDK as `window.Telegram.WebApp.initData`.
+
+### How validation works
+
+The server's `check_auth()` function performs three checks in order:
+
+1. **HMAC signature** — The init data string is validated using HMAC-SHA256. The secret key is derived as:
+   ```
+   secret_key = HMAC-SHA256(key=b"WebAppData", msg=TELEGRAM_TOKEN)
+   ```
+   The `hash` field embedded in the init data must match the HMAC of the sorted data-check string computed with that secret key.
+
+2. **Session expiry** — The `auth_date` field in the init data must be within **86400 seconds (24 hours)** of the current server time. Older tokens are rejected to prevent replay attacks.
+
+3. **Admin allowlist** — The `user.username` decoded from the init data must appear (case-insensitively) in the `ALLOWED_ADMINS` environment variable. Users not on the list receive `403 Forbidden`.
+
+### Example request
+
+```bash
+curl -H "Authorization: Bearer <init_data>" \
+  http://localhost:8080/api/stats
+```
+
+### DEV_BYPASS
+
+<Warning>
+  Setting `DEV_BYPASS=true` in your `.env` file skips all authentication checks
+  and returns a dummy admin ID. This is intended **only** for local development.
+  Never enable `DEV_BYPASS` in a production environment.
+</Warning>
+
+## Response Format
+
+All endpoints return **JSON**. Successful responses include a `status` field (either `"ok"` or `"success"`) along with any relevant data payload. Error responses follow this shape:
+
+```json
+{
+  "status": "error",
+  "reason": "Human-readable description of what went wrong"
+}
+```
+
+Common HTTP status codes returned on error:
+
+| Code | Meaning |
+|------|---------|
+| `401` | Missing, empty, or cryptographically invalid `Authorization` header |
+| `403` | Valid signature but the user is not in `ALLOWED_ADMINS` |
+| `500` | Unexpected server-side or Telegram Bot API error |
+
+## CORS
+
+The server is configured with [aiohttp-cors](https://github.com/aio-libs/aiohttp-cors). The allowed origin is read from the `WEBAPP_URL` environment variable at startup:
+
+- If `WEBAPP_URL` is set, only requests from that exact origin are accepted.
+- If `WEBAPP_URL` is not set, the origin defaults to `*` (all origins).
+
+In production, `WEBAPP_URL` should be set to the domain of your admin Mini App so that only that origin can call the API.
+
+## Available Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/stats` | Database stats, bandwidth usage, recent errors |
+| `GET` | `/api/config` | All runtime configuration keys |
+| `POST` | `/api/config` | Update one or more config keys |
+| `GET` | `/api/chats` | Recently active chats with metadata |
+| `POST` | `/api/chat/settings` | Update per-chat settings |
+| `POST` | `/api/chat/leave` | Bot leaves a chat |
+| `POST` | `/api/chat/alert` | Send alert to a chat |
+| `GET` | `/api/chat/top_users` | Top message senders in a chat |
+| `GET` | `/api/blocked` | All blocked users and groups |
+| `POST` | `/api/block` | Block a user or group |
+| `POST` | `/api/unblock` | Unblock a user or group |
+| `GET` | `/api/specials` | All VIP users and instructions |
+| `POST` | `/api/specials` | Add or update a VIP user |
+| `POST` | `/api/specials/delete` | Remove a VIP user |
+| `POST` | `/api/broadcast` | Broadcast message to all chats |
+| `POST` | `/api/upload_cookies` | Upload yt-dlp cookies.txt |
+| `POST` | `/api/update_ytdlp` | Trigger yt-dlp upgrade |
+| `GET` | `/api/model_limits` | Per-model RPM/RPD usage stats |
+| `POST` | `/api/chat/send_profile_link` | Send profile link to DM user |
+
+For full parameter and response documentation for every endpoint, see the [API Endpoints reference](/reference/api-endpoints).

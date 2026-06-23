@@ -1,0 +1,82 @@
+---
+title: "Multi-Platform Media Downloader (Instagram, YouTube, Threads)"
+sidebarTitle: "Media Downloader"
+description: "Dummy Gemini Bot automatically detects and downloads media from Instagram, YouTube, Threads, Pinterest, and Twitter, with inline streaming and Telegram 50MB bypass."
+---
+
+Paste any Instagram, YouTube, Threads, Pinterest, or Twitter link in a chat and the bot automatically downloads and re-uploads the media — complete with caption, uploader metadata, and a direct source link. No commands required; the bot detects platform URLs in any message.
+
+## Supported Platforms
+
+### Instagram
+Photos, videos, and carousel/album posts are supported via **instaloader**. When cookies are not configured, the bot falls back to browser impersonation (see [Browser Impersonation](#browser-impersonation)) to bypass login prompts.
+
+### Threads
+Photos, videos, and multi-media carousels are supported. Threads content is scraped directly from HTML to bypass yt-dlp's domain-redirect issues with the `threads.net` domain.
+
+### YouTube
+Videos are downloaded via **yt-dlp** with a **Deno-based JavaScript runtime** to handle YouTube's bot-detection and signature extraction.
+
+### Pinterest
+Photos and videos are downloaded via **yt-dlp**.
+
+### Twitter/X
+Photos and videos are downloaded via **yt-dlp**.
+
+## How It Works
+
+The media download pipeline follows these steps:
+
+1. **yt-dlp** (or instaloader for Instagram/Threads) downloads the media to `temp_downloads/`.
+2. **ffprobe** extracts width, height, and duration metadata from the downloaded file.
+3. **ffmpeg** generates a thumbnail for video content.
+4. **Pillow** performs content detection to determine the media type.
+5. The bot calls the appropriate Telegram method — `send_video`, `send_photo`, or `send_animation` — based on the detected type.
+
+## Instagram Carousel Albums
+
+Multi-image and multi-video Instagram posts are handled as **Telegram media groups** (albums). The bot:
+
+- Groups all media items into a single album send.
+- Attaches the uploader's username, the original caption, and a direct link to the post.
+- Sends the full album in one Telegram message group for clean presentation.
+
+## 50MB Telegram Limit Bypass
+
+Telegram bots have a hard **50MB upload limit**. When a downloaded file exceeds this limit, the bot:
+
+1. Detects the oversize condition before attempting the upload.
+2. Fetches a **Cobalt CDN** direct download link for the content.
+3. Sends the Cobalt link as a text message so the user can download the file directly.
+
+<Note>
+  The Cobalt CDN fallback applies to all platforms — not just video. Any file exceeding 50MB triggers this path.
+</Note>
+
+## Guest Bots Mode (Telegram 10.0+)
+
+Guest Bots Mode allows the bot to be summoned **inline in any group or channel without being a member**. Users type:
+
+```
+@bot_username <link>
+```
+
+The bot processes the link and returns a result directly in the inline interface. For album posts, the inline result shows the **first item** plus an **inline keyboard button** that directs the user to the bot's DM for full album delivery — since Telegram's inline interface cannot send multi-item albums.
+
+## Browser Impersonation
+
+When Instagram cookies are not configured, the bot uses **curl_cffi** to mimic the TLS fingerprints of Chrome, Safari, or Firefox. This bypasses Instagram's login walls and bot-detection without requiring an authenticated session.
+
+For **persistent, authenticated access** (recommended for higher rate limits and private content), place a Netscape-format cookies file at:
+
+```
+data/cookies.txt
+```
+
+<Note>
+  `cookies.txt` in `data/` is used by yt-dlp for authenticated platform access across all supported platforms. You can upload it via the **admin dashboard Settings tab** without SSH access.
+</Note>
+
+## Startup Cleanup
+
+On every bot boot, the bot purges any leftover files in the `temp_downloads/` directory — including partial downloads, edge-tts OGG files, and carousel artifacts from previous runs. This prevents disk bloat from interrupted or crashed download sessions.

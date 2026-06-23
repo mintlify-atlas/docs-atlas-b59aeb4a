@@ -1,0 +1,80 @@
+---
+title: "Admin WebApp Dashboard Overview"
+sidebarTitle: "Overview"
+description: "Dummy Gemini Bot's React admin WebApp dashboard provides real-time stats, chat moderation, broadcast messaging, configuration, and API quota monitoring in Telegram."
+---
+
+The admin dashboard is a React Single Page App accessible directly inside Telegram as a Mini App, requiring no separate browser login. It communicates with the bot's built-in REST API server and surfaces all operational controls — from live database stats and per-chat moderation to broadcast messaging and runtime configuration — in a single, authenticated interface.
+
+## Accessing the Dashboard
+
+1. Send `/admin` to the bot in Telegram.
+2. Click the **Open Admin Dashboard** button that appears in the reply.
+3. The Mini App opens inside Telegram using the URL configured in `WEBAPP_URL`.
+
+**Requirements:**
+
+- `WEBAPP_URL` must be set in your `.env` file to a valid **HTTPS URL** pointing to port `8080` (e.g. `https://yourdomain.com`).
+- Only Telegram users whose username is listed in the `ALLOWED_ADMINS` environment variable can access the dashboard. All other users receive an `Access denied` error.
+
+## Authentication
+
+The dashboard authenticates via **Telegram's WebApp init data HMAC signature**. When the Mini App opens, Telegram automatically provides a signed `initData` string that the frontend forwards as a `Bearer` token on every API request:
+
+```
+Authorization: Bearer <Telegram WebApp initData>
+```
+
+The server validates the signature using the bot's `TELEGRAM_TOKEN` as the signing key (`HMAC-SHA256` of the `WebAppData` secret key, then `HMAC-SHA256` of the sorted data-check string). After signature verification, it also confirms the requesting user's username is present in `ALLOWED_ADMINS`.
+
+Sessions expire after **24 hours** — the server rejects `initData` older than 86,400 seconds to prevent replay attacks.
+
+## Dashboard Tabs
+
+<CardGroup cols={2}>
+  <Card title="Stats" icon="chart-bar" href="/dashboard/overview#stats-tab">
+    DB size, chat counts, bandwidth usage, and recent error log entries.
+  </Card>
+  <Card title="Mod" icon="shield" href="/dashboard/moderation">
+    Per-chat settings, blocked users, and VIP special user management.
+  </Card>
+  <Card title="Cast" icon="broadcast-tower" href="/dashboard/broadcast">
+    Broadcast messages to all chats and users simultaneously.
+  </Card>
+  <Card title="Settings" icon="gear" href="/dashboard/settings">
+    Runtime config, TTS engines, personas, and yt-dlp tools.
+  </Card>
+  <Card title="Limits" icon="gauge" href="/dashboard/overview#limits-tab">
+    Per-model RPM/RPD quota monitoring with live progress bars.
+  </Card>
+</CardGroup>
+
+## Stats Tab
+
+The Stats tab provides a live snapshot of the bot's operational state, auto-refreshing every 5 seconds. It displays:
+
+| Metric | Description |
+|---|---|
+| **Total Messages** | Total number of messages stored across all chats in the `messages` table |
+| **Total Chats** | Number of distinct chat IDs present in the database |
+| **Database Size** | Current size of the SQLite database file in KB |
+| **Downloaded Bytes** | Total bytes downloaded by the media downloader (yt-dlp) |
+| **Uploaded Bytes** | Total bytes uploaded/sent back to Telegram |
+| **Recent Errors** | The 10 most recent entries from the error log, including timestamp, error type, and message |
+
+## Limits Tab
+
+The Limits tab provides real-time API quota monitoring for all configured Gemini models. Each model is shown with **progress bars** for its current RPM (requests per minute) and RPD (requests per day) usage, read from the `api_requests_log` table in the database.
+
+Models are automatically grouped into **text** and **TTS** categories based on your `MODEL_ID`, `FALLBACK_MODELS`, and `TTS_GEMINI_MODEL` settings. The thresholds used to calculate progress bar fill levels are configurable via the following keys in the Settings tab:
+
+| Config Key | Default | Description |
+|---|---|---|
+| `MONITOR_LIMIT_RPM` | `15` | Requests-per-minute ceiling for text models |
+| `MONITOR_LIMIT_RPD` | `1500` | Requests-per-day ceiling for text models |
+| `MONITOR_LIMIT_TTS_RPM` | `15` | Requests-per-minute ceiling for TTS models |
+| `MONITOR_LIMIT_TTS_RPD` | `1500` | Requests-per-day ceiling for TTS models |
+
+<Note>
+The dashboard communicates with the REST API at `/api/*` on port `8080`. **All endpoints require a valid Telegram WebApp auth token** in the `Authorization: Bearer` header. Requests without a valid token or from non-admin users are rejected with `401 Unauthorized` or `403 Forbidden`.
+</Note>

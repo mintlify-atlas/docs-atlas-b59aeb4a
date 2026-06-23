@@ -1,0 +1,41 @@
+---
+title: "AI Model Configuration and Failover Queue"
+sidebarTitle: "Model Settings"
+description: "Configure Dummy Gemini Bot's primary Gemini model, fallback model queue, context window size, API timeout, and request rate monitoring thresholds."
+---
+
+Model settings control which Gemini models are used for chat responses, how many messages of conversation history are forwarded to the model on each request, and the rate-limit thresholds displayed on the admin dashboard's **Limits** tab. Unlike the environment variables in `.env`, all of these settings are **runtime-configurable** — you can update them from the admin dashboard **Settings** tab without restarting the bot.
+
+## Config Key Reference
+
+| Key | Default | Description |
+|---|---|---|
+| `MODEL_ID` | `gemini-2.5-flash` | Primary Gemini model used for all chat responses |
+| `FALLBACK_MODELS` | `gemini-2.5-flash-lite,gemini-2.5-flash,gemma-4-31b-it` | Comma-separated fallback queue. The bot steps down this list automatically on rate limits or errors |
+| `CONTEXT_LIMIT` | `12` | Number of historical messages sent to the model per request. Higher values provide more context at the cost of increased latency and token usage |
+| `TIMEOUT` | `12.0` | Seconds to wait before an API generation request is considered timed out |
+| `MONITOR_LIMIT_RPM` | `15` | Requests-per-minute threshold displayed in the dashboard **Limits** tab |
+| `MONITOR_LIMIT_RPD` | `1500` | Requests-per-day threshold displayed in the dashboard **Limits** tab |
+| `RANDOM_ROAST_CHANCE` | `0.02` | Probability (`0.0`–`1.0`) that the bot fires an unprompted roast on any incoming message. Set to `0` to disable |
+
+## Failover Logic
+
+When the primary model (`MODEL_ID`) returns an error or signals a rate limit, the bot does not drop the request. Instead, it automatically iterates through the models listed in `FALLBACK_MODELS` **in order**, retrying the same generation request with each successive model until one succeeds. This ensures uninterrupted responses even during API quota exhaustion on the primary model.
+
+If every model in the fallback list also fails, the bot logs the error and notifies the user that the request could not be completed.
+
+<Tip>
+  Set the last entry in `FALLBACK_MODELS` to a free-tier model such as `gemini-2.5-flash-lite` or `gemma-4-31b-it`. This guarantees a zero-cost final fallback that keeps the bot responsive even when paid quota is exhausted.
+</Tip>
+
+## Per-Chat Model Overrides
+
+From the **Mod** tab in the admin dashboard, you can assign a custom model to any specific chat. Open the chat drawer, enter a model ID in the **Custom Model** field, and save. The assigned model overrides `MODEL_ID` for that chat only — all other chats continue to use the global primary model and fallback queue.
+
+Per-chat model overrides are stored in the `custom_model` column of the `chat_metadata` table and take effect on the next message in that chat without a restart.
+
+## Context Pruning
+
+The database retains up to **200 messages** per chat, giving the `/tldr` command a large enough window to produce meaningful summaries (it always uses the last 150 messages, regardless of `CONTEXT_LIMIT`).
+
+For normal chat responses, only the most recent `CONTEXT_LIMIT` messages are forwarded to the model. Keeping this number low (the default is `12`) reduces per-request latency and token cost while still providing enough conversational context for coherent replies. Increase `CONTEXT_LIMIT` if the bot loses track of earlier conversation threads in longer discussions.

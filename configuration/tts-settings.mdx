@@ -1,0 +1,45 @@
+---
+title: "Text-to-Speech Engine Configuration"
+sidebarTitle: "TTS Settings"
+description: "Configure Dummy Gemini Bot's TTS engine (Edge or Gemini), voice selection, pitch control, failover behavior, and per-model quota monitoring thresholds."
+---
+
+Dummy Gemini Bot ships with two text-to-speech engines: **Microsoft Edge TTS** (free, no API key required, natural Persian neural voices) and **Google Gemini TTS** (expressive, prompt-steerable audio generation backed by your Gemini API quota). The active engine, voice selection, pitch, and failover rules are all runtime-configurable from the admin dashboard **Settings** tab without restarting the bot.
+
+## Config Key Reference
+
+| Key | Default | Description |
+|---|---|---|
+| `TTS_ENGINE` | `edge` | Active TTS engine: `edge` or `gemini` |
+| `TTS_GEMINI_MODEL` | `gemini-2.5-flash-preview-tts,gemini-3.1-flash-tts-preview` | Comma-separated list of Gemini TTS model IDs. The bot tries each in order on failure |
+| `TTS_GEMINI_VOICE` | `Kore` | Gemini voice name. Available options: `Kore`, `Puck`, `Fenrir`, `Aoede`, `Charon` |
+| `TTS_EDGE_VOICE` | `fa-IR-FaridNeural` | Edge TTS voice name. Persian options: `fa-IR-FaridNeural`, `fa-IR-DilaraNeural` |
+| `TTS_FALLBACK_TO_EDGE` | `True` | If Gemini TTS fails entirely, fall back to Edge TTS. Accepts `True` or `False` |
+| `TTS_VOICE_PITCH` | `1.0` | Edge TTS pitch multiplier. `0.85` produces a deeper voice; `1.0` is the default natural pitch |
+| `MONITOR_LIMIT_TTS_RPM` | `15` | TTS requests-per-minute threshold for the dashboard **Limits** tab |
+| `MONITOR_LIMIT_TTS_RPD` | `1500` | TTS requests-per-day threshold for the dashboard **Limits** tab |
+
+## Engine Comparison
+
+| Feature | Edge TTS | Gemini TTS |
+|---|---|---|
+| Cost | Free | Consumes Gemini API quota |
+| API key required | No | Yes (`GEMINI_API_KEY`) |
+| Persian neural voices | ✅ (`fa-IR-FaridNeural`, `fa-IR-DilaraNeural`) | ❌ |
+| Expressive / prompt-steerable | ❌ | ✅ |
+| Audio output format | MP3 | OGG/Opus (via ffmpeg conversion) |
+| Works without internet quota | ✅ | ❌ |
+
+## Raw PCM Handling
+
+Gemini TTS can return audio in raw **PCM / `audio/L16`** format at 24 kHz mono rather than a compressed container. The bot automatically detects this content type and invokes **ffmpeg** to convert the raw PCM stream into a Telegram-compatible **OGG/Opus** file before sending. No manual configuration is required — ffmpeg must simply be available in the system `PATH`.
+
+## Gemini TTS Failover
+
+`TTS_GEMINI_MODEL` accepts multiple comma-separated model IDs. When a TTS request is made with `TTS_ENGINE=gemini`, the bot attempts generation with the first model ID. If that call fails (rate limit, model unavailability, or API error), it automatically tries the next model in the list.
+
+If every Gemini TTS model fails and `TTS_FALLBACK_TO_EDGE` is `True`, the bot silently falls back to Edge TTS using the voice configured in `TTS_EDGE_VOICE`, ensuring that a voice message is always delivered even during Gemini API outages.
+
+<Tip>
+  For a completely free setup with zero API cost, set `TTS_ENGINE=edge`. The `fa-IR-FaridNeural` (male) and `fa-IR-DilaraNeural` (female) voices produce natural-sounding Persian speech at no cost and with no rate limits.
+</Tip>

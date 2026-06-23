@@ -1,0 +1,513 @@
+---
+title: "REST API Endpoint Reference"
+sidebarTitle: "API Endpoints"
+description: "Full parameter and response documentation for all Dummy Gemini Bot REST API endpoints: stats, config, chats, moderation, broadcast, and quota monitoring."
+---
+
+This page documents every REST endpoint exposed by the Dummy Gemini Bot admin server, including request parameters and response fields. All endpoints require Bearer authentication — see [API Overview](/reference/api-overview) for authentication details.
+
+---
+
+## Stats
+
+### GET /api/stats
+
+Returns live database statistics and the most recent error log entries. Useful for monitoring bot health from the admin dashboard.
+
+**No request parameters.**
+
+**Response fields:**
+
+<ResponseField name="total_messages" type="integer">
+  Total number of messages stored across all chats in the database.
+</ResponseField>
+
+<ResponseField name="total_chats" type="integer">
+  Number of distinct chats that have at least one message on record.
+</ResponseField>
+
+<ResponseField name="db_size_kb" type="float">
+  Current size of the SQLite database file in kilobytes.
+</ResponseField>
+
+<ResponseField name="total_downloaded_bytes" type="integer">
+  Cumulative bytes downloaded for media processing (yt-dlp, Telegram files, etc.) since the database was created.
+</ResponseField>
+
+<ResponseField name="total_uploaded_bytes" type="integer">
+  Cumulative bytes uploaded to Telegram (sent media, voice messages, etc.) since the database was created.
+</ResponseField>
+
+<ResponseField name="recent_errors" type="array">
+  The last 10 entries from the `error_logs` table. Each object contains:
+  - `timestamp` — ISO datetime string of when the error occurred
+  - `error_type` — short error category string (e.g. `"TELEGRAM_API_ERROR"`)
+  - `error_message` — human-readable error description
+  - `stack_trace` — full Python traceback, if captured
+</ResponseField>
+
+**Example response:**
+
+```json
+{
+  "total_messages": 4821,
+  "total_chats": 12,
+  "db_size_kb": 512.4,
+  "total_downloaded_bytes": 1073741824,
+  "total_uploaded_bytes": 524288000,
+  "recent_errors": []
+}
+```
+
+---
+
+## Configuration
+
+### GET /api/config
+
+Returns all runtime configuration key-value pairs currently loaded from the `config` database table.
+
+**No request parameters.**
+
+**Response:** A flat JSON object with every config key as a property. The full set of default keys is defined in `config.py`'s `DEFAULT_CONFIG`, including `MODEL_ID`, `CONTEXT_LIMIT`, `SYSTEM_INSTRUCTION`, `TTS_ENGINE`, and others.
+
+**Example response:**
+
+```json
+{
+  "MODEL_ID": "gemini-2.5-flash",
+  "FALLBACK_MODELS": "gemini-2.5-flash-lite,gemini-2.5-flash,gemma-4-31b-it",
+  "CONTEXT_LIMIT": "12",
+  "TTS_ENGINE": "edge"
+}
+```
+
+---
+
+### POST /api/config
+
+Updates one or more configuration keys. Changes are persisted to the `config` table and take effect immediately in the running bot via the in-memory `runtime_config` dictionary.
+
+**Request body (JSON):** An object containing any subset of config keys as properties. Unrecognised keys are also stored — they are simply ignored by handlers that do not read them.
+
+**Example request body:**
+
+```json
+{ "MODEL_ID": "gemini-2.5-flash", "CONTEXT_LIMIT": "20" }
+```
+
+**Response:**
+
+```json
+{ "status": "success" }
+```
+
+---
+
+## Chats
+
+### GET /api/chats
+
+Returns all rows from the `chat_metadata` table, ordered by `last_active` descending. Used by the admin dashboard to display and manage active conversations.
+
+**No request parameters.**
+
+**Response:** Array of chat objects, each with the following fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `chat_id` | integer | Telegram chat ID |
+| `name` | string | Chat or user display name |
+| `type` | string | Chat type (`"private"`, `"group"`, `"supergroup"`, `"channel"`, or `"unknown"`) |
+| `msg_count` | integer | Total messages logged for this chat |
+| `last_active` | string | ISO datetime of the most recent message |
+| `is_muted` | integer | `1` if the bot is muted in this chat, `0` otherwise |
+| `custom_roast_chance` | float \| null | Per-chat random roast probability override |
+| `custom_cooldown` | integer \| null | Per-chat cooldown override in seconds |
+| `custom_tts_engine` | string \| null | Per-chat TTS engine override (`"edge"` or `"gemini"`) |
+| `custom_model` | string \| null | Per-chat Gemini model ID override |
+| `custom_system_instruction` | string \| null | Per-chat system prompt override |
+| `username` | string \| null | Telegram username of the chat or user |
+| `is_discussion` | integer | `1` if the chat is in discussion (scientific/technical) mode |
+
+---
+
+### POST /api/chat/settings
+
+Updates one or more settings for a specific chat. Only fields present in the request body are modified; omitted fields are left unchanged.
+
+**Request body parameters:**
+
+<ParamField body="chat_id" type="integer" required>
+  Telegram ID of the target chat.
+</ParamField>
+
+<ParamField body="is_muted" type="integer">
+  Set to `1` to mute the bot in this chat, `0` to unmute.
+</ParamField>
+
+<ParamField body="custom_roast_chance" type="float">
+  Override the random roast probability for this chat (`0.0`–`1.0`). Pass an empty string `""` to reset to the global default.
+</ParamField>
+
+<ParamField body="custom_cooldown" type="integer">
+  Override the message cooldown for this chat in seconds. Pass an empty string `""` to reset to the global default.
+</ParamField>
+
+<ParamField body="custom_tts_engine" type="string">
+  Override the TTS engine for this chat. Accepted values: `"edge"` or `"gemini"`. Pass an empty string `""` to reset.
+</ParamField>
+
+<ParamField body="custom_model" type="string">
+  Override the Gemini model ID used in this chat (e.g. `"gemini-2.5-flash"`). Pass an empty string `""` to reset.
+</ParamField>
+
+<ParamField body="custom_system_instruction" type="string">
+  Override the system instruction / persona prompt for this chat. Pass an empty string `""` to reset.
+</ParamField>
+
+<ParamField body="is_discussion" type="integer">
+  Set to `1` to enable discussion mode (scientific/technical tone), `0` to disable.
+</ParamField>
+
+**Response:**
+
+```json
+{ "status": "success" }
+```
+
+---
+
+### POST /api/chat/leave
+
+Instructs the bot to leave a group chat via the Telegram Bot API.
+
+**Request body:**
+
+```json
+{ "chat_id": 123456789 }
+```
+
+**Response:**
+
+```json
+{ "status": "success" }
+```
+
+---
+
+### POST /api/chat/alert
+
+Sends a plain or Markdown-formatted message to a specific chat on behalf of the bot.
+
+**Request body:**
+
+```json
+{ "chat_id": 123456789, "message": "Alert text here" }
+```
+
+**Response:**
+
+```json
+{ "status": "success" }
+```
+
+---
+
+### GET /api/chat/top_users
+
+Returns the top message senders for a given chat, ranked by message count.
+
+**Query parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `chat_id` | integer | Yes | Telegram chat ID to query |
+| `limit` | integer | No | Number of results to return (default: `5`) |
+
+**Response:** Array of user objects:
+
+```json
+[
+  { "name": "Alice", "count": 342 },
+  { "name": "Bob",   "count": 198 }
+]
+```
+
+---
+
+## Moderation
+
+### GET /api/blocked
+
+Returns all blocked users and groups stored in the `blocked` table.
+
+**No request parameters.**
+
+**Response:** Array of blocked-target objects:
+
+```json
+[
+  { "id": 123456789, "type": "user",  "name": "spammer_joe" },
+  { "id": -100987654, "type": "group", "name": "Bad Group" }
+]
+```
+
+---
+
+### POST /api/block
+
+Blocks a user or group by Telegram ID. If the target is a group (negative ID), the bot will also attempt to leave it automatically.
+
+**Request body:**
+
+<ParamField body="target_id" type="integer" required>
+  Telegram user or chat ID to block.
+</ParamField>
+
+<ParamField body="type" type="string" required>
+  Entity type — `"user"` or `"group"`.
+</ParamField>
+
+<ParamField body="name" type="string" required>
+  Display name to show in the blocked list.
+</ParamField>
+
+**Response:**
+
+```json
+{ "status": "success" }
+```
+
+---
+
+### POST /api/unblock
+
+Removes a target from the block list. The bot will start responding to that user or group again on the next message.
+
+**Request body:**
+
+```json
+{ "target_id": 123456789 }
+```
+
+**Response:**
+
+```json
+{ "status": "success" }
+```
+
+---
+
+### GET /api/specials
+
+Returns all VIP users who have a custom system instruction configured.
+
+**No request parameters.**
+
+**Response:** Array of VIP user objects:
+
+```json
+[
+  { "username": "alice", "instruction": "Always respond formally to this user." }
+]
+```
+
+---
+
+### POST /api/specials
+
+Adds a new VIP user or updates the instruction for an existing one. The `@` prefix is stripped from the username automatically.
+
+**Request body:**
+
+<ParamField body="username" type="string" required>
+  Telegram username without the `@` prefix.
+</ParamField>
+
+<ParamField body="instruction" type="string" required>
+  Custom system instruction to inject when the bot is replying to this user.
+</ParamField>
+
+**Response:**
+
+```json
+{ "status": "success" }
+```
+
+---
+
+### POST /api/specials/delete
+
+Removes a VIP user and their custom instruction.
+
+**Request body:**
+
+```json
+{ "username": "john" }
+```
+
+**Response:**
+
+```json
+{ "status": "success" }
+```
+
+---
+
+## Broadcast
+
+### POST /api/broadcast
+
+Sends a message to every chat ID recorded in the database. The bot first attempts to send with Markdown parse mode; if that fails it retries with plain text before marking the delivery as failed.
+
+**Request body:**
+
+```json
+{ "message": "Your broadcast text here" }
+```
+
+**Response:**
+
+```json
+{ "status": "success", "sent": 10, "total": 12 }
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | `"success"` or `"error"` |
+| `sent` | integer | Number of chats that received the message |
+| `total` | integer | Total number of chats attempted |
+
+---
+
+## Tools
+
+### POST /api/upload_cookies
+
+Uploads a new `cookies.txt` file used by yt-dlp for authenticated media downloads (e.g. age-restricted YouTube videos). The file is written to both the database directory and the project root.
+
+**Request body (JSON):**
+
+<ParamField body="cookies" type="string" required>
+  Full text content of the Netscape-format `cookies.txt` file.
+</ParamField>
+
+**Response:**
+
+```json
+{ "status": "success" }
+```
+
+---
+
+### POST /api/update_ytdlp
+
+Upgrades yt-dlp to the latest version by running `pip install --upgrade yt-dlp` in a subprocess.
+
+**No request body required.**
+
+**Response:**
+
+```json
+{
+  "status": "success",
+  "output": "Successfully installed yt-dlp-2025.x.x"
+}
+```
+
+On failure, returns HTTP `500` with a `"reason"` field containing the stderr output from pip.
+
+---
+
+## Quota Monitoring
+
+### GET /api/model_limits
+
+Returns per-model Gemini API request statistics derived from the `api_requests_log` table, along with model metadata fetched from the Gemini API. All models currently configured via `MODEL_ID`, `FALLBACK_MODELS`, and `TTS_GEMINI_MODEL` are included.
+
+**No request parameters.**
+
+**Response:** An object with two top-level keys:
+
+- **`models`** — array of model detail objects (one per active model), each containing:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `model_id` | string | Model identifier as configured |
+| `display_name` | string | Human-readable name from the Gemini API |
+| `description` | string | Model description from the Gemini API |
+| `input_token_limit` | integer \| null | Max input tokens supported |
+| `output_token_limit` | integer \| null | Max output tokens supported |
+| `status` | string | `"active"` or `"error"` |
+| `is_tts` | boolean | `true` if this model is used for TTS |
+| `error` | string \| null | Error message if the model could not be queried |
+| `limits` | object | Configured rate limits: `{ "rpm": N, "tpm": N, "rpd": N }` |
+| `usage` | object | Per-model usage stats (see below) |
+
+- **`usage`** — aggregate usage stats split by request type (`"text"` and `"tts"`), each with `last_minute` and `last_24_hours` buckets.
+
+The `usage` object inside each model entry has this shape:
+
+```json
+{
+  "last_minute":   { "requests": 3, "errors": 0 },
+  "last_24_hours": { "requests": 847, "errors": 2 }
+}
+```
+
+**Example response:**
+
+```json
+{
+  "models": [
+    {
+      "model_id": "gemini-2.5-flash",
+      "display_name": "Gemini 2.5 Flash",
+      "description": "Fast, efficient multimodal model.",
+      "input_token_limit": 1048576,
+      "output_token_limit": 8192,
+      "status": "active",
+      "is_tts": false,
+      "error": null,
+      "limits": { "rpm": 15, "tpm": 1000000, "rpd": 1500 },
+      "usage": {
+        "last_minute":   { "requests": 3, "errors": 0 },
+        "last_24_hours": { "requests": 847, "errors": 2 }
+      }
+    }
+  ],
+  "usage": {
+    "text": {
+      "last_minute":   { "requests": 3, "errors": 0 },
+      "last_24_hours": { "requests": 847, "errors": 2 }
+    },
+    "tts": {
+      "last_minute":   { "requests": 1, "errors": 0 },
+      "last_24_hours": { "requests": 120, "errors": 0 }
+    }
+  }
+}
+```
+
+---
+
+### POST /api/chat/send_profile_link
+
+Sends the requesting admin a Telegram message containing an inline button that deep-links to a target user's profile (`tg://user?id=<target_id>`). The message is sent directly to the authenticated admin's Telegram DM.
+
+**Request body:**
+
+<ParamField body="target_id" type="integer" required>
+  Telegram user ID whose profile link should be sent.
+</ParamField>
+
+<ParamField body="target_name" type="string">
+  Display name to show on the inline button label (default: `"User"`).
+</ParamField>
+
+**Response:**
+
+```json
+{ "status": "success" }
+```
